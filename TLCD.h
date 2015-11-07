@@ -74,7 +74,7 @@ class TLCD : public TSharpMem {
     void partner(float rtime, float curtime, uint8_t ind);
     void registerSegment(Segment *seg);
     uint8_t calculMode();
-    void notifyANCS() { _ancs_mode = 4; return;}
+    void notifyANCS() { _ancs_mode = 5; return;}
     void decrANCS() { if (_ancs_mode > 0)_ancs_mode-=1; return;}
     void affiANCS();
 

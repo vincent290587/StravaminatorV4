@@ -280,6 +280,11 @@ void TLCD::partner(float rtime, float curtime, uint8_t ligne) {
   drawFastVLine(LCDWIDTH / 2 + dixP, hl + 2, 7, BLACK);
 
   fillTriangle(centre - 7, hl + 7, centre, hl - 7, centre + 7, hl + 7, BLACK);
+  setCursor(centre - 13, hl + 15);
+  setTextSize(NB_LIG > 7 ? 1:2);
+  setTextColor(CLR_NRM); // 'inverted' text
+  print(String((int)(indice * 100.)));
+  
 
   // marques
   drawFastVLine(LCDWIDTH / 2, hl - 12, 12, BLACK);

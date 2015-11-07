@@ -127,7 +127,7 @@ void loop() {
       mes_points.enregistrePos(att.lat, att.lon, att.alt, att.secj);
 
       // maj merites
-      if (cumuls.majMerite(att.lat, att.lon, att.alt) == 0 || att.nbpts < MIN_POINTS) {
+      if (att.nbpts < MIN_POINTS) {
         // maj sharp
         Serial.println("Merites = 0");
         display.updateAll(&att);
@@ -140,6 +140,10 @@ void loop() {
       att.climb = cumuls.getClimb();
       
       boucle_outdoor();
+
+      if (cumuls.majMerite(att.lat, att.lon, att.alt) == 1) {
+        loggerData();
+      }
 
       // maj sharp
       display.updateAll(&att);
