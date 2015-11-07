@@ -15,11 +15,9 @@ class Merite {
   public:
     Merite();
     int majMerite(float lat, float lon, float ele);
-    void ajoutPR();
     float getDistance();
     float getClimb();
     float getPower();
-    int getPR();
     void majPower(ListePoints *mes_points, float speed_);
 
   private:

@@ -4,6 +4,7 @@
 uint8_t cond_wait () {
 
   switch (display.calculMode()) {
+    case MODE_GPS:
     case MODE_CRS:
       if (new_gps_data != 0) return 0;
       break;
@@ -29,7 +30,6 @@ void boucle_outdoor () {
   std::list<Segment>::iterator _iter;
   Segment *seg;
 
-  //Serial.println("Boucle OUTDOOR");
   att.nbact = 0;
   for (_iter = mes_segments._segs.begin(); _iter != mes_segments._segs.end(); _iter++) {
 
@@ -38,7 +38,7 @@ void boucle_outdoor () {
     if (seg->isValid()) {
       
       tmp_dist = watchdog (seg, att.lat, att.lon);
-      if (tmp_dist < min_dist_seg) min_dist_seg = tmp_dist;
+      if (tmp_dist < min_dist_seg && seg->getStatus() == SEG_OFF) min_dist_seg = tmp_dist;
 
       seg->majPerformance(&mes_points);
 
@@ -49,9 +49,10 @@ void boucle_outdoor () {
           segStartTone ();
         } else if (seg->getStatus() == SEG_FIN) {
           Serial.println("Segment termine");
-          segEndTone();
           if (seg->getAvance() > 0.) {
-            cumuls.ajoutPR();
+            att.nbpr++;
+            att.nbkom++;
+            segEndTone();
           } else {
             
           }
@@ -71,14 +72,14 @@ void boucle_outdoor () {
   att.next = min_dist_seg;
 
 #ifdef __DEBUG__
-  Serial.print("Next Seg: ");Serial.print(min_dist_seg);Serial.print("   FreeRam:  ");Serial.print(att.dist);Serial.print("   ");
+  Serial.print("Next Seg: ");Serial.print(min_dist_seg);Serial.print("   FreeRam:  ");Serial.print(myFreeRam());Serial.print("   ");
   printTime();
   att.pbatt = 96;
   att.climb = 1256;
   att.pwr = 425;
   Serial2.println("$HRM,172,1082");
   Serial2.println("$CAD,79,32.6");
-  if (att.nbpts % 130 == 0)
+  if (att.nbpts % 70 == 0)
     Serial2.println("$ANCS,3,Bonjour mon vincounet");
 #endif
 }

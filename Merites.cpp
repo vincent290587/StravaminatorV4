@@ -1,10 +1,10 @@
 /*
- *
- File:   Merites.cpp
- * Author: vincent
- *
- * Created on September 11, 2014, 11:01 AM
- */
+
+  File:   Merites.cpp
+   Author: vincent
+
+   Created on September 11, 2014, 11:01 AM
+*/
 
 #include "Merites.h"
 
@@ -33,17 +33,9 @@ float Merite::getPower() {
   return puissance;
 }
 
-int Merite::getPR() {
-  return pr_won;
-}
-
 
 // SETTERS
 
-// maj des segments gagnes
-void Merite::ajoutPR() {
-  pr_won+=1;
-}
 
 // Mise a jour avec la pos GPS courante
 int Merite::majMerite(float lat, float lon, float ele) {
@@ -66,7 +58,7 @@ int Merite::majMerite(float lat, float lon, float ele) {
 
   // mise a jour de la distance parcourue
   // tous les 10 metres
-  if (majDist > 10.) {
+  if (majDist > 2.) {
     distance += majDist;
     last_stored_lat = lat;
     last_stored_lon = lon;
@@ -79,7 +71,7 @@ int Merite::majMerite(float lat, float lon, float ele) {
       // mise a jour de la montee totale
       climb += ele - last_stored_ele;
       last_stored_ele = ele;
-    } 
+    }
     else if (ele + 1. < last_stored_ele) {
       // on descend, donc on garde la derniere alti
       // la plus basse
@@ -107,7 +99,7 @@ void Merite::majPower(ListePoints *mes_points, float speed_) {
       if (fSpeed < -0.5) {
         // on init
         fSpeed = speed_ / 3.6;
-      } 
+      }
       else {
         fSpeed = 0.7 * fSpeed +  0.3 * speed_ / 3.6;
       }

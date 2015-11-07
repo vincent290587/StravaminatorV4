@@ -50,6 +50,14 @@ typedef struct SAttitude { // definition d'un segment
   String ancs_msg;
 } SAttitude;
 
+
+typedef struct SBoot { // definition d'un segment
+  int16_t nb_seg;
+  uint16_t nb_sat;
+  int16_t sd_ok;
+  unsigned long hdop;
+} SBoot;
+
 enum MODE_TLCD {
   MODE_SD,
   MODE_GPS,
@@ -70,13 +78,22 @@ class TLCD : public TSharpMem {
     void updateAll(SAttitude *att);
     void updateScreen(void);
     void afficheSegments(void);
+    void afficheHRM(void);
     void afficheListePoints(uint8_t ligne, uint8_t ind_seg, uint8_t mode);
     void partner(float rtime, float curtime, uint8_t ind);
     void registerSegment(Segment *seg);
+    void setMode(uint8_t mode_) {_mode = mode_; return;}
+    void setCalcMode(uint8_t mode_) {_mode_prec = mode_; return;}
     uint8_t calculMode();
+    void afficheBoot();
+    void afficheGPS();
     void notifyANCS() { _ancs_mode = 5; return;}
     void decrANCS() { if (_ancs_mode > 0)_ancs_mode-=1; return;}
     void affiANCS();
+    void setSD(int16_t status_) {boot.sd_ok = status_;}
+    void setNbSeg(int16_t nb_) {boot.nb_seg = nb_;}
+    void setNbSat(int16_t nb_) {boot.nb_sat = nb_;}
+    void setHDOP (unsigned long hdop_) {boot.hdop = hdop_;}
 
   private:
     void traceLignes(void);
@@ -84,6 +101,7 @@ class TLCD : public TSharpMem {
     void traceLignes_1S(void);
     void traceLignes_2S(void);
 
+    SBoot boot;
     SAttitude att;
     uint8_t _nb_lignes_tot;
     uint8_t _ss, _seg_act;

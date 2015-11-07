@@ -108,6 +108,8 @@ int Segment::testActivation(ListePoints *liste) {
 
     distQuad = P1.dist(&PPc);
 
+    if (distQuad > DIST_ACT) return 0;
+
     PC = Vecteur(PPp, PPc);
     PS = Vecteur(P1, P2);
 
@@ -120,7 +122,7 @@ int Segment::testActivation(ListePoints *liste) {
         p_scal = -10.;
     }
 
-    if (distP2 * distP2 < distP1 * distP1 + distP1P2 * distP1P2 && distQuad < DIST_ACT && p_scal > 0.5) {
+    if (distP2 * distP2 < distP1 * distP1 + distP1P2 * distP1P2 && p_scal > 0.5) {
         return 1;
         //Serial.println(F("Test positif"));
     } else {

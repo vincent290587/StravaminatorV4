@@ -10,9 +10,10 @@ TLCD::TLCD(uint8_t ss) : TSharpMem(SPI_CLK, SPI_MOSI, ss) {
 
   _seg_act = 0;
   _nb_lignes_tot = 7;
-  _mode_prec = MODE_SD;
-  _mode = MODE_CRS;
+  _mode_prec = MODE_CRS;
+  _mode = MODE_SD;
 
+  boot.nb_seg = -1;
 }
 
 void TLCD::registerSegment(Segment *seg) {
@@ -79,7 +80,7 @@ void TLCD::cadran(uint8_t p_lig, uint8_t p_col, const char *champ, String  affi,
   print(affi);
 
   setTextSize(1);
-  setCursor(x + 95, y+5);// y + 42
+  setCursor(x + 95, y + 5); // y + 42
 
   if (p_unite) print(p_unite);
 }
@@ -147,13 +148,16 @@ void TLCD::updateScreen(void) {
 
   switch (_mode) {
     case MODE_SD:
+      afficheBoot();
       break;
     case MODE_GPS:
+      afficheGPS();
       break;
     case MODE_CRS:
       afficheSegments();
       break;
     case MODE_HRM:
+      afficheHRM();
       break;
     case MODE_HT:
       break;
@@ -166,13 +170,64 @@ void TLCD::updateScreen(void) {
   _seg_act = 0;
 }
 
+void TLCD::afficheBoot() {
+
+  setTextColor(CLR_NRM); // 'inverted' text
+  setCursor(40, 133);
+  setTextSize(3);
+
+  println("Booting...");
+  println("");
+  setTextSize(2);
+  if (boot.sd_ok == -1) println( String(" SD: --"));
+  if (boot.sd_ok == 1)  println( String(" SD: ok"));
+  println("");
+  if (boot.nb_seg != -1) println(String(" Nb segments: ") + boot.nb_seg);
+
+}
+
+void TLCD::afficheGPS() {
+
+  int largeur_b = 0;
+  int16_t x, y;
+
+  setTextColor(CLR_NRM); // 'inverted' text
+  setCursor(60, 133);
+  setTextSize(3);
+
+  println("GPS...");
+  println("");
+  setTextSize(2);
+  println( String(" Sat:  ") + boot.nb_sat);
+  println("");
+  println( String(" HDOP: ") + boot.hdop);
+  println("");
+  println("");
+  print("  ");
+  largeur_b = regFenLim(att.nbpts, 0, MIN_POINTS - 1, 0, 200 - 4);
+  x = getCursorX();
+  y = getCursorY();
+  drawRect(x, y, 200, 10, BLACK);
+  fillRect(x+2, y+2, largeur_b, 6, BLACK);
+}
+
+void TLCD::afficheHRM() {
+
+  cadran(1, 1, "Speed", String(att.cad_speed, 1), "km/h");
+  cadran(1, 2, "Pwr", String(att.pwr), "W");
+  cadran(2, 1, "CAD", String(att.cad_rpm), "rpm");
+  cadran(2, 2, "HRM", String(att.bpm), "bpm");
+  traceLignes_NS();
+
+}
+
 void TLCD::afficheSegments(void) {
   float vmoy = 0.;
-  uint8_t hrs=0, mns=0, scs=0;
-  String mins="00";
+  uint8_t hrs = 0, mns = 0, scs = 0;
+  String mins = "00";
 
-  if (att.nbpts-MIN_POINTS > 0) {
-    vmoy = att.dist / (att.nbpts-MIN_POINTS) * 3.6;
+  if (att.nbpts - MIN_POINTS > 0) {
+    vmoy = att.dist / (att.nbpts - MIN_POINTS) * 3.6;
     hrs = (float)att.nbpts / 3600.;
     mns = att.nbpts % 3600;
     mns = mns / 60;
@@ -200,12 +255,12 @@ void TLCD::afficheSegments(void) {
     cadran(7, 1, "Batt", String(att.pbatt), "%");
 
     hrs = att.secj / 3600.;
-    mns = att.secj  - hrs * 3600;
-    mns = mns / 60;
+    mns = att.secj  - hrs * 3600.;
+    mns = mns / 60.;
     if (mns < 10) mins = "0";
     else mins = "";
-    mins += mns;
-    
+    mins.append(String(mns));
+
     cadran(7, 2, "Time", String(hrs) + ":" + mins, 0);
 
     traceLignes();
@@ -220,7 +275,7 @@ void TLCD::afficheSegments(void) {
     cadran(3, 2, "HRM", String(att.bpm), "bpm");
     cadran(4, 1, "PR", String(att.nbpr), 0);
     cadran(4, 2, "KOM", String(att.nbkom), 0);
-    
+
     traceLignes();
 
     partner(_l_seg[0]->getAvance(), 55., NB_LIG);
@@ -235,7 +290,7 @@ void TLCD::afficheSegments(void) {
     cadran(2, 1, "CAD", String(att.cad_rpm), "rpm");
     cadran(2, 2, "HRM", String(att.bpm), "bpm");
 
-    
+
     partner(_l_seg[0]->getAvance(), 55., NB_LIG - 3);
     afficheListePoints(NB_LIG - 5, 0, 0);
 
@@ -281,10 +336,10 @@ void TLCD::partner(float rtime, float curtime, uint8_t ligne) {
 
   fillTriangle(centre - 7, hl + 7, centre, hl - 7, centre + 7, hl + 7, BLACK);
   setCursor(centre - 13, hl + 15);
-  setTextSize(NB_LIG > 7 ? 1:2);
+  setTextSize(NB_LIG > 7 ? 1 : 2);
   setTextColor(CLR_NRM); // 'inverted' text
   print(String((int)(indice * 100.)));
-  
+
 
   // marques
   drawFastVLine(LCDWIDTH / 2, hl - 12, 12, BLACK);
@@ -447,7 +502,7 @@ void TLCD::afficheListePoints(uint8_t ligne, uint8_t ind_seg, uint8_t mode) {
 
 void TLCD::affiANCS() {
   if (_ancs_mode > 0) {
-    fillRect(0, 0, LCDWIDTH, LCDHEIGHT / NB_LIG - 2, WHITE);
+    fillRect(0, 0, LCDWIDTH, LCDHEIGHT / NB_LIG, WHITE);
     setCursor(5, 5);
     setTextSize(2);
     setTextColor(CLR_NRM); // 'inverted' text
@@ -458,8 +513,10 @@ void TLCD::affiANCS() {
 }
 
 uint8_t TLCD::calculMode() {
-
-  return MODE_CRS;
+  if (_mode_prec == MODE_CRS || _mode_prec == MODE_HRM || _mode_prec == MODE_HT)
+    return _mode_prec;
+  else
+    return _mode;
 }
 
 
