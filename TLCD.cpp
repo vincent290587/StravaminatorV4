@@ -24,16 +24,42 @@ void TLCD::registerSegment(Segment *seg) {
 }
 
 void TLCD::updatePos(float lat_, float lon_, float alt_) {
-
   _lat = lat_;
   _lon = lon_;
   _alt = alt_;
 
 }
 
+void TLCD::cadranH(uint8_t p_lig, const char *champ, String  affi, const char *p_unite) {
+
+  int decal = 0;
+  int x = LCDWIDTH / 2 * 0.5;
+  int y = LCDHEIGHT / NB_LIG * (p_lig - 1);
+
+  setTextColor(CLR_NRM); // 'inverted' text
+  setCursor(5, y + 5);
+  setTextSize(1);
+
+  if (champ) print(champ);
+
+  if (affi.length() < 4) {
+    decal = (4 - affi.length()) * 20;
+  }
+  setCursor(x + 20 + decal, y + 20);
+  setTextSize(3);
+  print(affi);
+
+  setTextSize(1);
+  x = LCDWIDTH / 2;
+  setCursor(x + 105, y + 5);// y + 42
+
+  if (p_unite) print(p_unite);
+}
+
 
 void TLCD::cadran(uint8_t p_lig, uint8_t p_col, const char *champ, String  affi, const char *p_unite) {
 
+  int decal = 0;
   int x = LCDWIDTH / 2 * (p_col - 1);
   int y = LCDHEIGHT / NB_LIG * (p_lig - 1);
 
@@ -43,12 +69,17 @@ void TLCD::cadran(uint8_t p_lig, uint8_t p_col, const char *champ, String  affi,
 
   if (champ) print(champ);
 
-  setCursor(x + 25, y + 27);
+  if (affi.length() < 6) {
+    decal = (4 - affi.length()) * 14;
+  } else if (affi.length() > 5) {
+    affi = "---";
+  }
+  setCursor(x + 25 + decal, y + 23);
   setTextSize(3);
   print(affi);
 
   setTextSize(1);
-  setCursor(x + 105, y + 42);
+  setCursor(x + 95, y+5);// y + 42
 
   if (p_unite) print(p_unite);
 }
@@ -73,7 +104,7 @@ void TLCD::traceLignes_1S(void) {
 
   uint8_t ind1;
 
-  drawFastVLine(LCDWIDTH / 2, 0, LCDHEIGHT / NB_LIG * 5, BLACK);
+  drawFastVLine(LCDWIDTH / 2, 0, LCDHEIGHT / NB_LIG * 4, BLACK);
 
   for (ind1 = 0; ind1 < NB_LIG - 1; ind1++) {
     if (ind1 != NB_LIG - 3)
@@ -97,14 +128,20 @@ void TLCD::traceLignes_NS(void) {
 
   uint8_t ind1;
 
-  drawFastVLine(LCDWIDTH / 2, 0, LCDHEIGHT, BLACK);
+  drawFastVLine(LCDWIDTH / 2, 0, LCDHEIGHT * 4 / _nb_lignes_tot, BLACK);
+  drawFastVLine(LCDWIDTH / 2, LCDHEIGHT * 5 / _nb_lignes_tot, LCDHEIGHT, BLACK);
 
   for (ind1 = 0; ind1 < NB_LIG - 1; ind1++)
     drawFastHLine(0, LCDHEIGHT / NB_LIG * (ind1 + 1), LCDWIDTH, BLACK);
 
 }
 
-void TLCD::updateAll(void) {
+void TLCD::updateAll(SAttitude *att_) {
+  updatePos(att_->lat, att_->lon, att_->alt);
+  memcpy(&att, att_, sizeof(SAttitude));
+}
+
+void TLCD::updateScreen(void) {
 
   clearBuffer();
 
@@ -124,26 +161,66 @@ void TLCD::updateAll(void) {
       break;
   }
 
+  affiANCS();
   refresh();
   _seg_act = 0;
 }
 
 void TLCD::afficheSegments(void) {
-  uint8_t ind1, ind2;
+  float vmoy = 0.;
+  uint8_t hrs=0, mns=0, scs=0;
+  String mins="00";
+
+  if (att.nbpts-MIN_POINTS > 0) {
+    vmoy = att.dist / (att.nbpts-MIN_POINTS) * 3.6;
+    hrs = (float)att.nbpts / 3600.;
+    mns = att.nbpts % 3600;
+    mns = mns / 60;
+    scs = att.nbpts % 60;
+    if (mns < 10) mins = "0";
+    else mins = "";
+    mins.append(String(mns));
+  }
 
   if (_seg_act == 0) {
 
     _nb_lignes_tot = 7;
-    // TODO remove
-    for (ind1 = 0; ind1 < 2; ind1++)
-      for (ind2 = 0; ind2 < NB_LIG; ind2++) {
-        cadran(ind2 + 1, ind1 + 1, "Dist", String("30.6"), "km");
-      }
+    // ligne colonne
+    cadran(1, 1, "Dist", String(att.dist / 1000., 1), "km");
+    cadran(1, 2, "Pwr", String("425"), "W");
+    cadran(2, 1, "Speed", String(att.speed, 1), "km/h");
+    cadran(2, 2, "Climb", String(att.climb, 0), "m");
+    cadran(3, 1, "CAD", String(att.cad_rpm), "rpm");
+    cadran(3, 2, "HRM", String(att.bpm), "bpm");
+    cadran(4, 1, "PR", String(att.nbpr), 0);
+    cadran(4, 2, "KOM", String(att.nbkom), 0);
+    cadranH(5, "Next seg", String(att.next), "m");
+    cadran(6, 1, "Vmoy", String(att.cad_speed, 2), "km/h");
+    cadran(6, 2, "Dur", String(hrs) + ":" + mins, 0);
+    cadran(7, 1, "Batt", String(att.pbatt), "%");
+
+    hrs = att.secj / 3600.;
+    mns = att.secj  - hrs * 3600;
+    mns = mns / 60;
+    if (mns < 10) mins = "0";
+    else mins = "";
+    mins += mns;
+    
+    cadran(7, 2, "Time", String(hrs) + ":" + mins, 0);
 
     traceLignes();
   } else if (_seg_act == 1) {
 
-    _nb_lignes_tot = 8;
+    _nb_lignes_tot = 7;
+    cadran(1, 1, "Dist", String(att.dist / 1000., 1), "km");
+    cadran(1, 2, "Pwr", String(att.pwr), "W");
+    cadran(2, 1, "Speed", String(att.speed, 1), "km/h");
+    cadran(2, 2, "Climb", String(att.climb, 0), "m");
+    cadran(3, 1, "CAD", String(att.cad_rpm), "rpm");
+    cadran(3, 2, "HRM", String(att.bpm), "bpm");
+    cadran(4, 1, "PR", String(att.nbpr), 0);
+    cadran(4, 2, "KOM", String(att.nbkom), 0);
+    
     traceLignes();
 
     partner(_l_seg[0]->getAvance(), 55., NB_LIG);
@@ -152,6 +229,13 @@ void TLCD::afficheSegments(void) {
   } else if (_seg_act == 2) {
 
     _nb_lignes_tot = 8;
+    // ligne colonne
+    cadran(1, 1, "Speed", String(att.speed, 1), "km/h");
+    cadran(1, 2, "Pwr", String(att.pwr), "W");
+    cadran(2, 1, "CAD", String(att.cad_rpm), "rpm");
+    cadran(2, 2, "HRM", String(att.bpm), "bpm");
+
+    
     partner(_l_seg[0]->getAvance(), 55., NB_LIG - 3);
     afficheListePoints(NB_LIG - 5, 0, 0);
 
@@ -233,6 +317,7 @@ void TLCD::afficheListePoints(uint8_t ligne, uint8_t ind_seg, uint8_t mode) {
   // on cherche la taille de fenetre
   liste = _l_seg[ind_seg]->getListePoints();
   maPos = liste->getFirstPoint();
+  pCourant = maPos;
   for (_iter = liste->getLPTS()->begin(); _iter != liste->getLPTS()->end();) {
 
     pCourant = _iter.operator->();
@@ -240,7 +325,7 @@ void TLCD::afficheListePoints(uint8_t ligne, uint8_t ind_seg, uint8_t mode) {
     if (_iter == liste->getLPTS()->end()) break;
     pSuivant = _iter.operator->();
 
-    if (!pSuivant->isValid()) break;
+    if (!pSuivant->isValid() || !pCourant->isValid()) break;
 
     if (pCourant->_lat < minLat) minLat = pCourant->_lat;
     if (pCourant->_lon < minLon) minLon = pCourant->_lon;
@@ -268,7 +353,7 @@ void TLCD::afficheListePoints(uint8_t ligne, uint8_t ind_seg, uint8_t mode) {
     maxLon += 0.0008;
   }
 
-  while (maxLat - minLat < 0.5*(maxLon - minLon)) {
+  while (maxLat - minLat < 0.5 * (maxLon - minLon)) {
     minLat -= 0.0014;
     maxLat += 0.0014;
   }
@@ -291,7 +376,7 @@ void TLCD::afficheListePoints(uint8_t ligne, uint8_t ind_seg, uint8_t mode) {
     if (_iter == liste->getLPTS()->end()) break;
     pSuivant = _iter.operator->();
 
-    if (!pSuivant->isValid()) break;
+    if (!pSuivant->isValid() || !pCourant->isValid()) break;
 
     dDist = distance_between(pCourant->_lat, pCourant->_lon, pSuivant->_lat, pSuivant->_lon);
 
@@ -310,10 +395,10 @@ void TLCD::afficheListePoints(uint8_t ligne, uint8_t ind_seg, uint8_t mode) {
     }
 
     curDist += dDist;
+    if (pCourant == maPos) posTrouve = 1;
     if (posTrouve == 0) {
       maDist = curDist;
     }
-    if (pCourant == maPos) posTrouve = 1;
   }
 
   drawCircle(regFenLim(pCourant->_lon, minLon, maxLon, 0, LCDWIDTH),
@@ -348,13 +433,24 @@ void TLCD::afficheListePoints(uint8_t ligne, uint8_t ind_seg, uint8_t mode) {
 
   setTextSize(2);
 
-  print(_l_seg[ind_seg]->getAvance());
+  print(String(_l_seg[ind_seg]->getAvance(), 1));
   // completion
   setCursor(10, debut_cadran + 10);
   print((int)(maDist / curDist * 100.));
   print("%");
 }
 
+void TLCD::affiANCS() {
+  if (_ancs_mode > 0) {
+    fillRect(0, 0, LCDWIDTH, LCDHEIGHT / NB_LIG - 2, WHITE);
+    setCursor(5, 5);
+    setTextSize(2);
+    setTextColor(CLR_NRM); // 'inverted' text
+    print(att.ancs_msg);
+  }
+  decrANCS();
+  return;
+}
 
 uint8_t TLCD::calculMode() {
 

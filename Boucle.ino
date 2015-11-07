@@ -30,7 +30,7 @@ void boucle_outdoor () {
   Segment *seg;
 
   //Serial.println("Boucle OUTDOOR");
-
+  att.nbact = 0;
   for (_iter = mes_segments._segs.begin(); _iter != mes_segments._segs.end(); _iter++) {
 
     seg = _iter.operator->();
@@ -43,12 +43,18 @@ void boucle_outdoor () {
       seg->majPerformance(&mes_points);
 
       if (seg->getStatus() != SEG_OFF) {
+        att.nbact+=1;
         if (seg->getStatus() == SEG_START) {
           Serial.println("Segment commence");
           segStartTone ();
         } else if (seg->getStatus() == SEG_FIN) {
           Serial.println("Segment termine");
           segEndTone();
+          if (seg->getAvance() > 0.) {
+            cumuls.ajoutPR();
+          } else {
+            
+          }
         }
         Serial.print("Register ");
         Serial.println(seg->getName());
@@ -57,12 +63,24 @@ void boucle_outdoor () {
 
     }
 
+  // pour taches de fond
+  delayMicroseconds(10);
 
-  }
+  } // fin for
 
-  Serial.print("Next Seg: ");Serial.print(min_dist_seg);Serial.print("   FreeRam:  ");Serial.print(myFreeRam());Serial.print("   ");
+  att.next = min_dist_seg;
 
+#ifdef __DEBUG__
+  Serial.print("Next Seg: ");Serial.print(min_dist_seg);Serial.print("   FreeRam:  ");Serial.print(att.dist);Serial.print("   ");
   printTime();
+  att.pbatt = 96;
+  att.climb = 1256;
+  att.pwr = 425;
+  Serial2.println("$HRM,172,1082");
+  Serial2.println("$CAD,79,32.6");
+  if (att.nbpts % 130 == 0)
+    Serial2.println("$ANCS,3,Bonjour mon vincounet");
+#endif
 }
 
 

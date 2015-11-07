@@ -18,10 +18,12 @@
 
 using namespace std;
 
-#define MARGE_ACT 6
+#define MARGE_ACT 2
 #define DIST_ACT 20.
 
 #define DIST_ALLOC 300.
+
+#define MIN_POINTS 10
 
 #define FACTOR 100000.
 
@@ -82,7 +84,7 @@ class ListeSegments {
   public:
     ListeSegments(void);
     void push_back(Segment seg) {_segs.push_back(seg);};
-    
+    int size() {return _segs.size();}
 
     std::list<Segment> _segs;
   private:

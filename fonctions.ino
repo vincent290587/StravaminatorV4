@@ -183,8 +183,6 @@ float watchdog(Segment *mon_seg, float lat1, float long1) {
 
   } else if (mon_seg->longueur() > 0 && mon_seg->isValid()) {
 
-    Point pp = *mon_seg->getFirstPoint();
-
     Point tmp_pt(lat1, long1, 0., 0.);
 
     tmp_dist = mon_seg->dist(&tmp_pt);

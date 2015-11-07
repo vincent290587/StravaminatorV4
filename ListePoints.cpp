@@ -25,7 +25,7 @@ Point::Point(float lat, float lon, float alt, float rtime) {
 
 
 int Point::isValid() {
-    if (_lat == 0. || _lon == 0.) {
+    if (_lat == 0. || _lon == 0. || abs(_lat) > 89. || abs(_lon) > 189.) {
         return 0;
     } else {
         return 1;

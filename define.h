@@ -10,8 +10,10 @@
 #define TAILLE_LIGNE 250
 #define TAILLE_MAX  50
 
+#define __DEBUG__
+
 uint8_t led = 13;
-uint8_t sd_cs = 10;// PTC1
+uint8_t sd_cs = 20;// PTC1
 
 static float sea_level_pressure = SENSORS_PRESSURE_SEALEVELHPA;
 //static float temperature = 0;
@@ -27,26 +29,12 @@ static unsigned long time_c = 0;
 volatile uint8_t new_gps_data = 0;
 volatile uint8_t new_hrm_data = 0;
 volatile uint8_t new_cad_data = 0;
+volatile uint8_t new_ancs_data = 0;
 
 // set up variables using the SD utility library functions:
 SdFat sd;
 SdFile file;
 SdFile gpx;
-
-typedef struct SAttitude { // definition d'un segment
-    float lat;
-    float lon;
-    float alt;
-    float gpsalt;
-    float secj;
-    uint8_t bpm;
-    uint8_t cad;
-    uint16_t pwr;
-    float temp;
-    float pressu;
-    float vbatt;
-    float rrint;
-} SAttitude;
 
 
 SAttitude att;

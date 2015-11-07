@@ -15,7 +15,7 @@ void basicLong() {
 
 void otherTone() {
   noTone(speakerPin); 
-  tone(speakerPin, 6800, 250);
+  tone(speakerPin, 12000, 250);
 }
 
 
