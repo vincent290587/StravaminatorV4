@@ -1,3 +1,21 @@
+
+int percentageBatt (float tensionValue) {
+
+  float fp_ = 0.;
+
+  if (tensionValue > 3.694) {
+    fp_ = 536.34*tensionValue*tensionValue*tensionValue-6723.8*tensionValue*tensionValue;
+    fp_ += 28186*tensionValue-39407;
+  } else if (tensionValue > 2.) {
+    fp_ = 1e-12*pow(tensionValue, 22.315);
+  } else {
+    fp_ = 0;
+  }
+
+  return (int)fp_;
+}
+
+
 uint32_t myFreeRam(){ // for Teensy 3.0
     uint32_t stackTop;
     uint32_t heapTop;
@@ -130,7 +148,7 @@ float watchdog(Segment *mon_seg, float lat1, float long1) {
   static float tmp_dist = 0.;
   static float tmp_lat = 0.;
   static float tmp_lon = 0.;
-  float ret_val = 50000;
+  float ret_val = 5000;
   
   //Serial.println(F("Debut watchdog "));
   //Serial.flush();
@@ -158,6 +176,7 @@ float watchdog(Segment *mon_seg, float lat1, float long1) {
     else {
 
       if (parseSegmentName(mon_seg->getName(), &tmp_lat, &tmp_lon) == 1) {
+        Serial.println(F("Echec parsing du nom"));
         loggerMsg("Echec parsing du nom");
         loggerMsg(mon_seg->getName());
         return ret_val;
@@ -166,7 +185,7 @@ float watchdog(Segment *mon_seg, float lat1, float long1) {
       // on etudie si on doit charger
       tmp_dist = distance_between(lat1, long1, tmp_lat, tmp_lon);
       ret_val = tmp_dist;
-      //Serial.println((int)tmp_dist);
+
       if (tmp_dist < DIST_ALLOC) {
 
         if (mon_seg->longueur() > 0) {
@@ -188,7 +207,7 @@ float watchdog(Segment *mon_seg, float lat1, float long1) {
     tmp_dist = mon_seg->dist(&tmp_pt);
     ret_val = tmp_dist;
     
-    if (tmp_dist > MARGE_ACT * DIST_ALLOC) {
+    if (tmp_dist > MARGE_DESACT * DIST_ALLOC) {
       // on desalloue
       Serial.print(F("Le watchdog desalloue2 dist = "));
       Serial.print((int)tmp_dist);
@@ -196,6 +215,7 @@ float watchdog(Segment *mon_seg, float lat1, float long1) {
       Serial.println(mon_seg->getName());
       loggerMsg("Desallocation non nominale !");
       loggerMsg(mon_seg->getName());
+      loggerMsg(String(tmp_dist, 1).c_str());
       mon_seg->desallouerPoints();
       mon_seg->setStatus(SEG_OFF);
     }

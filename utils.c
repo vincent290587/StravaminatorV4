@@ -67,24 +67,6 @@ float distance_between(float lat1, float long1, float lat2, float long2) {
 }
 
 
-char *calculeNom (float lat, float lon) {
-
-    static char tableau[15];
-
-    int iLat = (lat + 90.) * FACTOR + 0.5;
-    int iLon = (lon + 180.) * FACTOR + 0.5;
-
-    strncpy(tableau, toBase36(0, iLat, tableau), 5);
-
-    tableau[5] = '#';
-
-    strncpy(tableau + 6, toBase36(1, iLon, tableau), 6);
-
-    tableau[12] = '\0';
-    tableau[13] = '\0';
-
-    return tableau;
-}
 
 void calculePos (const char *nom, float *lat, float *lon) {
 
@@ -114,22 +96,6 @@ void calculePos (const char *nom, float *lat, float *lon) {
     return;
 }
 
-char *toBase36 (int avecPoint, int aConv, char *sortie) {
-
-    static char tab[15];
-
-    if (!avecPoint) {
-        strncpy(tab, base36enc(aConv), 5);
-        tab[5] = '\0';
-    } else {
-        strncpy(tab, base36enc(aConv), 2);
-        tab[2] = '.';
-        strncpy(tab + 3, base36enc(aConv) + 2, 3);
-        tab[6] = '\0';
-    }
-
-    return tab;
-}
 
 long unsigned int toBase10 (char *entree) {
 
@@ -152,21 +118,4 @@ long unsigned int toBase10 (char *entree) {
 
 }
 
-char *base36enc (long unsigned int value) {
 
-    static char base36[45] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$$$$$$";
-    /* log(2**64) / log(36) = 12.38 => max 13 char + '\0' */
-    static char buffer[14];
-    unsigned int offset = sizeof (buffer);
-
-    memset(buffer, '0', 13 * sizeof (char));
-
-    buffer[--offset] = '\0';
-    do {
-        buffer[--offset] = base36[value % 36];
-    } while (value /= 36);
-
-    offset = 8;
-    return buffer + offset;
-
-}

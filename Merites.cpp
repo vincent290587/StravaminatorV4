@@ -57,8 +57,8 @@ int Merite::majMerite(float lat, float lon, float ele) {
   majDist = distance_between(lat, lon, last_stored_lat, last_stored_lon);
 
   // mise a jour de la distance parcourue
-  // tous les 10 metres
-  if (majDist > 2.) {
+  // tous les X metres
+  if (majDist > DIST_RECORD) {
     distance += majDist;
     last_stored_lat = lat;
     last_stored_lon = lon;
@@ -86,39 +86,46 @@ int Merite::majMerite(float lat, float lon, float ele) {
 void Merite::majPower(ListePoints *mes_points, float speed_) {
 
   static float fHp = 0.;
-  static float MASSE = 80.;
   static float fSpeed = -1.;
+  Point P1, P2;
+  float dElev, dTime;
 
-  if (mes_points)
-    if (mes_points->getElevTot() < -2.) {
+  if (!mes_points) return;
 
-      // STEP 1 : on filtre altitude et vitesse
-      //  =>l'elevation de la liste est inversee, le temps aussi
-      fHp = 0.7 * fHp + 0.3 * mes_points->getElevTot() / mes_points->getTempsTot();
+  if (mes_points->longueur() <= FILTRE_NB) return;
 
-      if (fSpeed < -0.5) {
-        // on init
-        fSpeed = speed_ / 3.6;
-      }
-      else {
-        fSpeed = 0.7 * fSpeed +  0.3 * speed_ / 3.6;
-      }
+  P1 = mes_points->getFirstPoint();
+  P2 = mes_points->getPointAt(FILTRE_NB - 1);
 
-      // STEP 2 : Calcul
-      //    W = 0,24 Ã— v^3 + 0,137 Ã— m Ã— v + 9,81 Ã— m Ã— dh/dt
-      puissance = 9.81 * MASSE * fHp; // grav
-      puissance += 0.137 * MASSE * fSpeed; // sol + meca
-      puissance += 0.24 * fSpeed * fSpeed * fSpeed; // air
+  dElev = P1._alt   - P2._alt;
+  dTime = P1._rtime - P2._rtime;
 
-      if (fSpeed < 1.5 || fSpeed > 40. || puissance < 20. || fHp < -0.05)
-        puissance = -100.;
+  if (fabs(dTime) > 3.) {
+
+    // STEP 1 : on filtre altitude et vitesse
+    //  =>l'elevation de la liste est inversee, le temps aussi
+    fHp = 0.6 * fHp + 0.4 * dElev / dTime;
+
+    if (fSpeed < -0.5) {
+      // on init
+      fSpeed = speed_ / 3.6;
     }
+    else {
+      fSpeed = 0.7 * fSpeed +  0.3 * speed_ / 3.6;
+    }
+
+    // STEP 2 : Calcul
+    puissance = 9.81 * MASSE * fHp; // grav
+    puissance += 0.004 * 9.81 * MASSE * fSpeed; // sol + meca
+    puissance += 0.204 * fSpeed * fSpeed * fSpeed; // air
+    puissance *= 1.025; // transmission (rendement velo)
+
+    if (fSpeed < 1.5 || fSpeed > 45. || puissance < 5.) {
+      puissance = -100.;
+    }
+  }
 
   return;
 }
-
-
-
-
 
 

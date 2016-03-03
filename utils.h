@@ -18,15 +18,11 @@ float regFenLim(float val_, float b1_i, float b1_f, float b2_i, float b2_f);
 
 float distance_between(float lat1, float long1, float lat2, float long2);
 
-char *calculeNom (float lat, float lon);
-
 void calculePos (const char *nom, float *lat, float *lon);
-
-char *toBase36 (int avecPoint, int aConv, char *sortie);
 
 long unsigned int toBase10 (char *entree);
 
-char *base36enc (long unsigned int value);
+extern void loggerMsg(const char *msg_);
 
 #ifdef	__cplusplus
 }

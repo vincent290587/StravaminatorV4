@@ -10,10 +10,13 @@ TLCD::TLCD(uint8_t ss) : TSharpMem(SPI_CLK, SPI_MOSI, ss) {
 
   _seg_act = 0;
   _nb_lignes_tot = 7;
-  _mode_prec = MODE_CRS;
-  _mode = MODE_SD;
 
   boot.nb_seg = -1;
+
+  addMenuItem(" Mode course");
+  addMenuItem(" Mode HRM");
+  addMenuItem(" Mode HT");
+  addMenuItem(" Mode simu");
 }
 
 void TLCD::registerSegment(Segment *seg) {
@@ -22,6 +25,10 @@ void TLCD::registerSegment(Segment *seg) {
     _l_seg[_seg_act] = seg;
     _seg_act += 1;
   }
+}
+
+void TLCD::resetSegments() {
+  _seg_act = 0;
 }
 
 void TLCD::updatePos(float lat_, float lon_, float alt_) {
@@ -144,9 +151,11 @@ void TLCD::updateAll(SAttitude *att_) {
 
 void TLCD::updateScreen(void) {
 
-  clearBuffer();
+  resetBuffer();
 
-  switch (_mode) {
+  machineEtat();
+
+  switch (getModeAffi()) {
     case MODE_SD:
       afficheBoot();
       break;
@@ -154,20 +163,26 @@ void TLCD::updateScreen(void) {
       afficheGPS();
       break;
     case MODE_CRS:
+      setModeCalcul(MODE_CRS);
       afficheSegments();
       break;
     case MODE_HRM:
       afficheHRM();
       break;
     case MODE_HT:
+      afficheHT();
+      break;
+    case MODE_SIMU:
+      setModeCalcul(MODE_SIMU);
+      afficheHT();
       break;
     case MODE_MENU:
+      affichageMenu ();
       break;
   }
 
   affiANCS();
-  refresh();
-  _seg_act = 0;
+  writeWhole();
 }
 
 void TLCD::afficheBoot() {
@@ -208,7 +223,7 @@ void TLCD::afficheGPS() {
   x = getCursorX();
   y = getCursorY();
   drawRect(x, y, 200, 10, BLACK);
-  fillRect(x+2, y+2, largeur_b, 6, BLACK);
+  fillRect(x + 2, y + 2, largeur_b, 6, BLACK);
 }
 
 void TLCD::afficheHRM() {
@@ -221,17 +236,26 @@ void TLCD::afficheHRM() {
 
 }
 
+void TLCD::afficheHT() {
+
+  cadran(1, 1, "Speed", String(att.cad_speed, 1), "km/h");
+  cadran(1, 2, "Pwr", String(att.pwr), "W");
+  cadran(2, 1, "CAD", String(att.cad_rpm), "rpm");
+  cadran(2, 2, "HRM", String(att.bpm), "bpm");
+  traceLignes_NS();
+
+}
+
 void TLCD::afficheSegments(void) {
   float vmoy = 0.;
-  uint8_t hrs = 0, mns = 0, scs = 0;
+  unsigned long int hrs = 0, mns = 0;
   String mins = "00";
 
-  if (att.nbpts - MIN_POINTS > 0) {
-    vmoy = att.dist / (att.nbpts - MIN_POINTS) * 3.6;
-    hrs = (float)att.nbpts / 3600.;
-    mns = att.nbpts % 3600;
+  if (att.nbpts - MIN_POINTS > 0 && att.nbsec_act > MIN_POINTS) {
+    vmoy = att.dist / att.nbsec_act * 3.6;
+    hrs = (float)att.nbsec_act / 3600.;
+    mns = att.nbsec_act % 3600;
     mns = mns / 60;
-    scs = att.nbpts % 60;
     if (mns < 10) mins = "0";
     else mins = "";
     mins.append(String(mns));
@@ -240,21 +264,24 @@ void TLCD::afficheSegments(void) {
   if (_seg_act == 0) {
 
     _nb_lignes_tot = 7;
+    
     // ligne colonne
     cadran(1, 1, "Dist", String(att.dist / 1000., 1), "km");
-    cadran(1, 2, "Pwr", String("425"), "W");
+    cadran(1, 2, "Pwr", String(att.pwr), "W");
     cadran(2, 1, "Speed", String(att.speed, 1), "km/h");
     cadran(2, 2, "Climb", String(att.climb, 0), "m");
     cadran(3, 1, "CAD", String(att.cad_rpm), "rpm");
     cadran(3, 2, "HRM", String(att.bpm), "bpm");
     cadran(4, 1, "PR", String(att.nbpr), 0);
-    cadran(4, 2, "KOM", String(att.nbkom), 0);
-    cadranH(5, "Next seg", String(att.next), "m");
-    cadran(6, 1, "Vmoy", String(att.cad_speed, 2), "km/h");
+    cadran(4, 2, "I", String((int)att.cbatt), "mA");
+    cadran(6, 1, "Vmoy", String(vmoy, 2), "km/h");
     cadran(6, 2, "Dur", String(hrs) + ":" + mins, 0);
     cadran(7, 1, "Batt", String(att.pbatt), "%");
 
+    cadranH(5, "Next seg", String(att.next), "m");
+
     hrs = att.secj / 3600.;
+    // secondes dans l'heure
     mns = att.secj  - hrs * 3600.;
     mns = mns / 60.;
     if (mns < 10) mins = "0";
@@ -278,7 +305,7 @@ void TLCD::afficheSegments(void) {
 
     traceLignes();
 
-    partner(_l_seg[0]->getAvance(), 55., NB_LIG);
+    partner(_l_seg[0]->getAvance(), _l_seg[0]->getCur(), NB_LIG);
     afficheListePoints(NB_LIG - 2, 0, 0);
 
   } else if (_seg_act == 2) {
@@ -291,10 +318,10 @@ void TLCD::afficheSegments(void) {
     cadran(2, 2, "HRM", String(att.bpm), "bpm");
 
 
-    partner(_l_seg[0]->getAvance(), 55., NB_LIG - 3);
+    partner(_l_seg[0]->getAvance(), _l_seg[0]->getCur(), NB_LIG - 3);
     afficheListePoints(NB_LIG - 5, 0, 0);
 
-    partner(_l_seg[1]->getAvance(), 55., NB_LIG);
+    partner(_l_seg[1]->getAvance(), _l_seg[1]->getCur(), NB_LIG);
     afficheListePoints(NB_LIG - 2, 1, 0);
     traceLignes();
 
@@ -305,11 +332,13 @@ void TLCD::afficheSegments(void) {
 void TLCD::partner(float rtime, float curtime, uint8_t ligne) {
 
   int hl, ol, dixP;
-  float indice = rtime / curtime;
+  float indice;
   static int centre = LCDWIDTH / 2;
 
-  if (curtime < 2.) {
-    return;
+  if (curtime < 5.) {
+    indice = rtime / 5.;
+  } else {
+    indice = rtime / curtime;
   }
 
   hl = LCDHEIGHT / NB_LIG * (ligne - 1) + 25;
@@ -501,22 +530,66 @@ void TLCD::afficheListePoints(uint8_t ligne, uint8_t ind_seg, uint8_t mode) {
 }
 
 void TLCD::affiANCS() {
-  if (_ancs_mode > 0) {
+  if (l_notif.size() > 0) {
+    if (_ancs_mode > 0) {
     fillRect(0, 0, LCDWIDTH, LCDHEIGHT / NB_LIG, WHITE);
     setCursor(5, 5);
     setTextSize(2);
     setTextColor(CLR_NRM); // 'inverted' text
-    print(att.ancs_msg);
+      if (l_notif.front().type != 0) {
+        print(l_notif.front().title);
+      println(":");
+    }
+      print(l_notif.front().msg);
+  } else {
+      l_notif.pop_front();
+      if (l_notif.size() > 0) {
+        _ancs_mode = ANCS_TIMER;
+      }
+    }
   }
   decrANCS();
   return;
 }
 
-uint8_t TLCD::calculMode() {
-  if (_mode_prec == MODE_CRS || _mode_prec == MODE_HRM || _mode_prec == MODE_HT)
-    return _mode_prec;
-  else
-    return _mode;
+SNotif::SNotif(uint8_t type_, const char *title_, const char *msg_) {
+
+  type = type_;
+  msg = msg_;
+
+  if (type_ == 0) {
+    title = "";
+  } else {
+    title = title_;
+  }
+}
+
+void TLCD::notifyANCS(uint8_t type_, const char *title_, const char *msg_) {
+
+  l_notif.push_back(SNotif(type_, title_, msg_));
+  _ancs_mode = ANCS_TIMER;
+
+  return;
+}
+
+
+
+
+void TLCD::affichageMenu () {
+
+  setCursor(0, 50);
+  setTextSize(3);
+  setTextColor(CLR_NRM);
+
+  uint8_t i;
+
+  for (i = 0; i < getNbElemMenu(); i++) {
+    if (i == getSelectionMenu()) setTextColor(CLR_INV);
+    println(getMenuItem(i));
+    if (i == getSelectionMenu()) setTextColor(CLR_NRM);
+  }
+
+  setTextColor(CLR_NRM);
 }
 
 

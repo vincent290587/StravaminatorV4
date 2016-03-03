@@ -3,16 +3,48 @@
 
 uint8_t cond_wait () {
 
-  switch (display.calculMode()) {
+  static long millis_ = millis();
+
+  if (download_request || upload_request) {
+    return 0;
+  }
+
+  if (display.getPendingAction() != NO_ACTION) {
+    desactiverNavigateur();
+    display.updateScreen();
+    // debounce
+    delay(100);
+    activerNavigateur();
+  }
+
+  if (millis() - millis_ > 1500) {
+    millis_ = millis();
+    return 0;
+  }
+
+  switch (display.getModeCalcul()) {
     case MODE_GPS:
+      if (new_ancs_data != 0) {
+        millis_ = millis();
+        return 0;
+      }
     case MODE_CRS:
-      if (new_gps_data != 0) return 0;
+      if (new_gps_data != 0) {
+        millis_ = millis();
+        return 0;
+      }
       break;
     case MODE_HRM:
-      if (new_hrm_data != 0) return 0;
+      if (new_hrm_data != 0) {
+        millis_ = millis();
+        return 0;
+      }
       break;
     case MODE_HT:
-      if (new_cad_data != 0) return 0;
+      if (new_cad_data != 0) {
+        millis_ = millis();
+        return 0;
+      }
       break;
   }
 
@@ -22,28 +54,33 @@ uint8_t cond_wait () {
 
 void boucle_outdoor () {
 
-  float min_dist_seg = 5000;
+  float min_dist_seg = 50000;
   float tmp_dist;
+  uint8_t order_glasses;
 
   resetdelay_();
+
+  cumuls.majPower(&mes_points, att.speed);
 
   std::list<Segment>::iterator _iter;
   Segment *seg;
 
   att.nbact = 0;
+  order_glasses = 0;
+  display.resetSegments();
   for (_iter = mes_segments._segs.begin(); _iter != mes_segments._segs.end(); _iter++) {
 
     seg = _iter.operator->();
 
     if (seg->isValid()) {
-      
+
       tmp_dist = watchdog (seg, att.lat, att.lon);
       if (tmp_dist < min_dist_seg && seg->getStatus() == SEG_OFF) min_dist_seg = tmp_dist;
 
       seg->majPerformance(&mes_points);
 
       if (seg->getStatus() != SEG_OFF) {
-        att.nbact+=1;
+        att.nbact += 1;
         if (seg->getStatus() == SEG_START) {
           Serial.println("Segment commence");
           segStartTone ();
@@ -53,36 +90,49 @@ void boucle_outdoor () {
             att.nbpr++;
             att.nbkom++;
             segEndTone();
-          } else {
-            
           }
+        } else if (seg->getStatus() == SEG_ON && order_glasses == 0) {
+          Serial3.println(Nordic::encodeOrder(seg->getAvance(), seg->getCur()));
+          order_glasses = 1;
         }
-        Serial.print("Register ");
-        Serial.println(seg->getName());
         display.registerSegment(seg);
       }
 
     }
 
-  // pour taches de fond
-  delayMicroseconds(10);
+    // pour taches de fond
+    delayMicroseconds(10);
 
   } // fin for
 
+  if (order_glasses == 0) {
+    Serial3.println(Nordic::encodeOrder(5., 5.));
+    order_glasses = 1;
+  }
+
   att.next = min_dist_seg;
 
+
 #ifdef __DEBUG__
-  Serial.print("Next Seg: ");Serial.print(min_dist_seg);Serial.print("   FreeRam:  ");Serial.print(myFreeRam());Serial.print("   ");
+  Serial.print("Next Seg: "); Serial.print(min_dist_seg); Serial.print("   FreeRam:  "); Serial.print(myFreeRam()); Serial.print("  ");
+  Serial.print("Nb seg actifs: "); Serial.print(att.nbact); Serial.print("  ");
   printTime();
-  att.pbatt = 96;
-  att.climb = 1256;
   att.pwr = 425;
-  Serial2.println("$HRM,172,1082");
-  Serial2.println("$CAD,79,32.6");
-  if (att.nbpts % 70 == 0)
-    Serial2.println("$ANCS,3,Bonjour mon vincounet");
+  att.speed = 28.5;
 #endif
 }
 
+void boucle_simu () {
 
+    static float avance = -15.;
+
+    Serial3.println(Nordic::encodeOrder(avance, 100));
+
+    avance += 1.;
+
+    if (avance > 15.) {
+      avance = -15.;
+    }
+  
+}
 

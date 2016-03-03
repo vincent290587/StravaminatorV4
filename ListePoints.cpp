@@ -9,6 +9,16 @@
 #include "utils.h"
 #include <math.h>
 
+Point2D::Point2D() {
+    _lat = 0;
+    _lon = 0;
+}
+
+Point2D::Point2D(float lat, float lon) {
+    _lat = lat;
+    _lon = lon;
+}
+
 Point::Point() {
     _lat = 0;
     _lon = 0;

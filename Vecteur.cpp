@@ -30,10 +30,10 @@ Vecteur::Vecteur(Point point1, Point point2) {
     _y = distance_between(point1._lat, point1._lon, point2._lat, point1._lon);
 
     if (point2._lat < point1._lat) {
-        _y = _y;
+        _y = -_y;
     }
     if (point2._lon < point1._lon) {
-        _x = _x;
+        _x = -_x;
     }
 
     _z = 0;

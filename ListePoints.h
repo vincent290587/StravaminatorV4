@@ -9,7 +9,7 @@
 #define	LISTEPOINTS_H
 
 
-#define NB_RECORDING 5
+#define NB_RECORDING 9
 
 #include <list>
 #include "utils.h"
@@ -20,7 +20,23 @@ using namespace std;
 
 class Vecteur;
 
-class Point {
+class Point2D {
+public:
+    Point2D();
+    Point2D(float lat, float lon);
+    //Point2D & operator=(const Point2D &point);
+    //Point2D & operator=(const Point2D *point);
+    //void toString();
+    //int isValid();
+    float dist(Point2D *autre_p)  {
+        return distance_between(_lat, _lon, autre_p->_lat, autre_p->_lon);
+    }
+public:
+    float _lat;
+    float _lon;
+};
+
+class Point : public Point2D {
 public:
     Point();
     Point(float lat, float lon, float alt, float rtime);
@@ -32,8 +48,6 @@ public:
         return distance_between(_lat, _lon, autre_p->_lat, autre_p->_lon);
     }
 public:
-    float _lat;
-    float _lon;
     float _alt;
     float _rtime;
 };

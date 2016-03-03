@@ -10,6 +10,12 @@
 
 #include "ListePoints.h"
 
+#define DIST_RECORD 10.
+
+#define FILTRE_NB   4
+
+#define MASSE       79.
+
 class Merite {
 
   public:

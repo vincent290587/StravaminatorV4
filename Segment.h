@@ -18,16 +18,19 @@
 
 using namespace std;
 
-#define MARGE_ACT 2
-#define DIST_ACT 20.
+#define MARGE_DESACT  2
+#define MARGE_ACT     3
+#define DIST_ACT     25.
+
+#define PSCAL_LIM    0.
 
 #define DIST_ALLOC 300.
 
-#define MIN_POINTS 10
+#define MIN_POINTS 12
 
 #define FACTOR 100000.
 
-#define SEG_FIN -3
+#define SEG_FIN -5
 #define SEG_OFF 0
 #define SEG_START 1
 #define SEG_ON 2
@@ -46,7 +49,8 @@ class Segment {
     int isValid();
     int8_t getStatus() {return _actif;}
     void setStatus(int8_t act) {_actif = act; return;}
-    float getAvance();
+    float getAvance() {return _monAvance;}
+    float getCur() {return _monCur;}
     float getTempsTot() {return _lpts.getTempsTot();}
     const char* getName();
     void ajouterPointFin(float lat, float lon, float alt, float msec);
