@@ -56,6 +56,11 @@ typedef struct SAttitude { // definition d'un segment
   float rrint;
 } SAttitude;
 
+typedef union SBlackBox {
+  SAttitude satt;
+  uint8_t tab[];
+} SBlackBox;
+
 
 typedef struct SBoot { // definition d'un segment
   int16_t nb_seg;

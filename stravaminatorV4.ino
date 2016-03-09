@@ -10,6 +10,7 @@
 #include <avr/sleep.h>
 #include <Nordic.h>
 #include <IntelliScreen.h>
+#include <SPIFFS25.h>
 #include "TSharpMem.h"
 #include "TLCD.h"
 #include "Merites.h"
@@ -26,6 +27,7 @@ Nordic nordic;
 
 Merite cumuls;
 
+SPIFFS25 sst;
 Adafruit_BMP085_Unified bmp = Adafruit_BMP085_Unified(10085);
 
 STC3100 stc = STC3100(0x70);
@@ -75,6 +77,9 @@ void setup() {
     /* There was a problem detecting the BMP085 ... check your connections */
     Serial.println("Ooops, no STC detected ... Check your wiring or I2C ADDR!");
   }
+
+  // on demarre la SPI flash
+  sst.begin(memCs, memWp, memHold);
 
   if (!sd.begin(sd_cs, SPI_HALF_SPEED)) {
     Serial.println(F("Card initialization failed."));
@@ -143,8 +148,10 @@ void serialEvent1() {
   while (Serial1.available() && att.has_started > 0) {
     c = Serial1.read();
     //Serial.write(c);
-    if (gps.encode(c)) {
-      new_gps_data = 1;
+    if (mode_simu == 0) {
+      if (gps.encode(c)) {
+        new_gps_data = 1;
+      }
     }
   }
 }
