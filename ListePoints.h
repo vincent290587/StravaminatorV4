@@ -24,8 +24,8 @@ class Point2D {
 public:
     Point2D();
     Point2D(float lat, float lon);
-    //Point2D & operator=(const Point2D &point);
-    //Point2D & operator=(const Point2D *point);
+    Point2D & operator=(const Point2D &point);
+    Point2D & operator=(const Point2D *point);
     //void toString();
     //int isValid();
     float dist(Point2D *autre_p)  {
@@ -47,6 +47,10 @@ public:
     float dist(Point *autre_p)  {
         return distance_between(_lat, _lon, autre_p->_lat, autre_p->_lon);
     }
+    float dist(Point autre_p)  {
+        return distance_between(_lat, _lon, autre_p._lat, autre_p._lon);
+    }
+    
 public:
     float _alt;
     float _rtime;
@@ -57,7 +61,6 @@ public:
 class ListePoints {
 public:
     ListePoints();
-    //ListePoints(const ListePoints& orig);
     void ajouteDebut(float lat, float lon, float alt, float msec);
     void ajouteFin(float lat, float lon, float alt, float msec);
     void enregistrePos(float lat, float lon, float alt, float msec);
@@ -71,12 +74,10 @@ public:
     Vecteur posRelative(Point point);
     Vecteur deltaListe();
     float dist(Point *p_);
+	float dist(float lat_, float lon_);
     float getTempsTot();
     float getElevTot();
     std::list<Point> *getLPTS() {return &_lpoints;}
-    //float longueurListe() {return 0.;};
-    //float elevationListe() {return 0.;};
-    //float tempsListe() {return 0.;};
     
 private:
     std::list<Point> _lpoints;

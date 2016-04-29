@@ -13,7 +13,11 @@ TLCD::TLCD(uint8_t ss) : TSharpMem(SPI_CLK, SPI_MOSI, ss) {
 
   boot.nb_seg = -1;
 
+  _parc = NULL;
+  _points = NULL;
+
   addMenuItem(" Mode course");
+  addMenuItem(" Mode parcours");
   addMenuItem(" Mode HRM");
   addMenuItem(" Mode HT");
   addMenuItem(" Mode simu");
@@ -27,8 +31,25 @@ void TLCD::registerSegment(Segment *seg) {
   }
 }
 
+void TLCD::registerParcours(Parcours *par) {
+
+  _parc = par;
+  _par_act = 1;
+
+}
+
+void TLCD::registerHisto(ListePoints *pts) {
+
+  _points = pts;
+
+}
+
 void TLCD::resetSegments() {
   _seg_act = 0;
+}
+
+void TLCD::resetParcours() {
+  _par_act = 0;
 }
 
 void TLCD::updatePos(float lat_, float lon_, float alt_) {
@@ -94,6 +115,12 @@ void TLCD::cadran(uint8_t p_lig, uint8_t p_col, const char *champ, String  affi,
 
 void TLCD::traceLignes(void) {
 
+  if (_par_act > 0) {
+
+    traceLignes_PAR();
+    return;
+  }
+
   switch (_seg_act) {
     case 0:
       traceLignes_NS();
@@ -144,6 +171,18 @@ void TLCD::traceLignes_NS(void) {
 
 }
 
+void TLCD::traceLignes_PAR(void) {
+
+  uint8_t ind1;
+
+  drawFastVLine(LCDWIDTH / 2, 0, LCDHEIGHT * 3 / _nb_lignes_tot, BLACK);
+
+  for (ind1 = 0; ind1 < 4; ind1++)
+    drawFastHLine(0, LCDHEIGHT / NB_LIG * (ind1 + 1), LCDWIDTH, BLACK);
+
+
+}
+
 void TLCD::updateAll(SAttitude *att_) {
   updatePos(att_->lat, att_->lon, att_->alt);
   memcpy(&att, att_, sizeof(SAttitude));
@@ -164,7 +203,12 @@ void TLCD::updateScreen(void) {
       break;
     case MODE_CRS:
       setModeCalcul(MODE_CRS);
+      if (_par_act > 0) setModeAffi(MODE_PAR);
       afficheSegments();
+      break;
+    case MODE_PAR:
+      setModeCalcul(MODE_CRS);
+      afficheParcours();
       break;
     case MODE_HRM:
       afficheHRM();
@@ -264,7 +308,7 @@ void TLCD::afficheSegments(void) {
   if (_seg_act == 0) {
 
     _nb_lignes_tot = 7;
-    
+
     // ligne colonne
     cadran(1, 1, "Dist", String(att.dist / 1000., 1), "km");
     cadran(1, 2, "Pwr", String(att.pwr), "W");
@@ -327,6 +371,61 @@ void TLCD::afficheSegments(void) {
 
   }
 }
+
+void TLCD::afficheParcours(void) {
+  float vmoy = 0.;
+  unsigned long int hrs = 0, mns = 0;
+  String mins = "00";
+
+  if (att.nbpts - MIN_POINTS > 0 && att.nbsec_act > MIN_POINTS) {
+    vmoy = att.dist / att.nbsec_act * 3.6;
+    hrs = (float)att.nbsec_act / 3600.;
+    mns = att.nbsec_act % 3600;
+    mns = mns / 60;
+    if (mns < 10) mins = "0";
+    else mins = "";
+    mins.append(String(mns));
+  }
+
+  if (_seg_act == 0) {
+
+    _nb_lignes_tot = 7;
+
+    // ligne colonne
+    cadran(1, 1, "Dist", String(att.dist / 1000., 1), "km");
+    cadran(1, 2, "Speed", String(att.speed, 1), "km/h");
+    cadran(2, 1, "HRM", String(att.bpm), "bpm");
+    cadran(2, 2, "Vmoy", String(vmoy, 2), "km/h");
+    cadran(3, 1, "CAD", String(att.cad_rpm), "rpm");
+    cadran(3, 2, "PR", String(att.nbpr), 0);
+    cadran(4, 1, "Batt", String(att.pbatt), "%");
+    cadran(4, 2, "Dur", String(hrs) + ":" + mins, 0);
+
+
+    afficheListeParcours(NB_LIG - 2);
+
+    traceLignes();
+  } else {
+
+    _nb_lignes_tot = 7;
+
+    // ligne colonne
+    cadran(1, 1, "Dist", String(att.dist / 1000., 1), "km");
+    cadran(1, 2, "Speed", String(att.speed, 1), "km/h");
+    cadran(2, 1, "HRM", String(att.bpm), "bpm");
+    cadran(2, 2, "Vmoy", String(vmoy, 2), "km/h");
+    cadran(3, 1, "CAD", String(att.cad_rpm), "rpm");
+    cadran(3, 2, "PR", String(att.nbpr), 0);
+
+
+    afficheListeParcours(NB_LIG - 2);
+
+    partner(_l_seg[0]->getAvance(), _l_seg[0]->getCur(), 4);
+
+    traceLignes();
+  }
+}
+
 
 
 void TLCD::partner(float rtime, float curtime, uint8_t ligne) {
@@ -529,19 +628,162 @@ void TLCD::afficheListePoints(uint8_t ligne, uint8_t ind_seg, uint8_t mode) {
   print("%");
 }
 
+
+void TLCD::afficheListeParcours(uint8_t ligne) {
+
+  float minLat = 100.;
+  float minLon = 400.;
+  float maxLat = -100.;
+  float maxLon = -400.;
+  float dDist = 0.;
+  float maDist = 10000.;
+  Point *pCourant, *pSuivant;
+  float maDpex = 0;
+  float maDpey = 0;
+  std::list<Point>::iterator _iter;
+  ListePoints *liste;
+  uint8_t nb_histo = 0;
+
+  if (_parc->longueur() < 5) return;
+
+
+  uint16_t debut_cadran = LCDHEIGHT / NB_LIG * (ligne - 1);
+  uint16_t fin_cadran   = LCDHEIGHT / NB_LIG * (ligne + 2);
+
+  // init
+  liste = _parc->getListePoints();
+
+  // on cherche la taille de fenetre
+
+  // distance au parcours
+  maDist = liste->dist(_lat, _lon);
+  minLon = maxLon = _lon;
+  minLat = maxLat = _lat;
+
+  if (maDist > 300) {
+    dDist = maDist + 300;
+  } else {
+    dDist = 300;
+  }
+
+  while (distance_between(minLat, minLon, maxLat, maxLon) < dDist) {
+
+    minLon -= 0.0008;
+    maxLon += 0.0008;
+    minLat -= 0.0014;
+    maxLat += 0.0014;
+
+  }
+
+
+  // on affiche
+  for (_iter = liste->getLPTS()->begin(); _iter != liste->getLPTS()->end();) {
+
+    pCourant = _iter.operator->();
+    _iter++;
+    if (_iter == liste->getLPTS()->end()) break;
+    pSuivant = _iter.operator->();
+
+    if (!pSuivant->isValid() || !pCourant->isValid()) break;
+
+
+    if ((minLon < pCourant->_lon && pCourant->_lon < maxLon &&
+         minLat < pCourant->_lat && pCourant->_lat < maxLat) ||
+        (minLon < pSuivant->_lon && pSuivant->_lon < maxLon &&
+         minLat < pSuivant->_lat && pSuivant->_lat < maxLat)) {
+
+      drawLine(regFenLim(pCourant->_lon, minLon, maxLon, 0, LCDWIDTH),
+               regFenLim(pCourant->_lat, minLat, maxLat, fin_cadran, debut_cadran),
+               regFenLim(pSuivant->_lon, minLon, maxLon, 0, LCDWIDTH),
+               regFenLim(pSuivant->_lat, minLat, maxLat, fin_cadran, debut_cadran), BLACK);
+    }
+
+  }
+
+
+  if (_points) {
+
+    if (_points->longueur() > 2) {
+
+      // anciennes positions
+      for (_iter = _points->getLPTS()->begin(); _iter != _points->getLPTS()->end(); _iter++) {
+
+        if (_iter == liste->getLPTS()->end() || nb_histo > 15) break;
+
+        pCourant = _iter.operator->();
+
+        if (!pCourant) break;
+
+        if (!pCourant->isValid()) {
+          break;
+        }
+
+        nb_histo++;
+
+        if ((minLon < pCourant->_lon && pCourant->_lon < maxLon &&
+             minLat < pCourant->_lat && pCourant->_lat < maxLat)) {
+
+          maDpex = regFenLim(pCourant->_lon, minLon, maxLon, 0, LCDWIDTH);
+          maDpey = regFenLim(pCourant->_lat, minLat, maxLat, fin_cadran, debut_cadran);
+          fillCircle(maDpex, maDpey, 3, BLACK);
+
+        }
+      }
+    }
+  }
+
+  // position courante
+  maDpex = regFenLim(_lon, minLon, maxLon, 0, LCDWIDTH);
+  maDpey = regFenLim(_lat, minLat, maxLat, fin_cadran, debut_cadran);
+  fillCircle(maDpex, maDpey, 6, BLACK);
+
+
+  if (_seg_act > 0 && _l_seg[0]) {
+    if (_l_seg[0]->getListePoints()) {
+      Point *dpseg = _l_seg[0]->getListePoints()->getLastPoint();
+      maDpex = regFenLim(dpseg->_lon, minLon, maxLon, 0, LCDWIDTH);
+      maDpey = regFenLim(dpseg->_lat, minLat, maxLat, fin_cadran, debut_cadran);
+      drawCircle(maDpex, maDpey, 8, BLACK);
+      print(String(_l_seg[0]->getAvance(), 1));
+
+      // completion
+      setTextSize(2);
+      setCursor(10, debut_cadran + 10);
+      if (_l_seg[0]->getTempsTot() - _l_seg[0]->getAvance() > 5.) {
+        float segperc = _l_seg[0]->getCur() / (_l_seg[0]->getTempsTot() - _l_seg[0]->getAvance());
+        if (0. < segperc && segperc < 100.) {
+          print((int)(segperc * 100.));
+          print("%");
+        }
+      }
+    }
+  }
+
+  setTextColor(CLR_NRM); // 'inverted' text
+
+  if (maDpey > fin_cadran - 30) {
+    setCursor(maDpex > LCDWIDTH - 70 ? LCDWIDTH - 70 : maDpex, maDpey - 20);
+  } else {
+    setCursor(maDpex > LCDWIDTH - 70 ? LCDWIDTH - 70 : maDpex, maDpey + 15);
+  }
+
+  setTextSize(2);
+
+}
+
 void TLCD::affiANCS() {
   if (l_notif.size() > 0) {
     if (_ancs_mode > 0) {
-    fillRect(0, 0, LCDWIDTH, LCDHEIGHT / NB_LIG, WHITE);
-    setCursor(5, 5);
-    setTextSize(2);
-    setTextColor(CLR_NRM); // 'inverted' text
+      fillRect(0, 0, LCDWIDTH, LCDHEIGHT / NB_LIG, WHITE);
+      setCursor(5, 5);
+      setTextSize(2);
+      setTextColor(CLR_NRM); // 'inverted' text
       if (l_notif.front().type != 0) {
         print(l_notif.front().title);
-      println(":");
-    }
+        println(":");
+      }
       print(l_notif.front().msg);
-  } else {
+    } else {
       l_notif.pop_front();
       if (l_notif.size() > 0) {
         _ancs_mode = ANCS_TIMER;

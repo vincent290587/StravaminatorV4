@@ -6,6 +6,7 @@
 #include <IntelliScreen.h>
 #include "TSharpMem.h"
 #include "Segment.h"
+#include "Parcours.h"
 #include "utils.h"
 #include "WProgram.h"
 
@@ -26,6 +27,10 @@
 #define ANCS_TIMER 5
 
 typedef struct SAttitude { // definition d'un segment
+  uint16_t nbpts;
+  uint8_t nbact;
+  uint8_t heure_c;
+  uint8_t min_c;
   uint8_t has_started;
   float lat;
   float lon;
@@ -36,16 +41,12 @@ typedef struct SAttitude { // definition d'un segment
   float climb;
   float dist;
   uint16_t next;
-  uint16_t nbpts;
   uint16_t nbsec_act;
   float secj;
   float secj_prec;
-  uint8_t heure_c;
-  uint8_t min_c;
   uint8_t bpm;
   uint8_t cad_rpm;
   uint16_t pwr;
-  uint8_t nbact;
   uint8_t nbpr;
   uint8_t nbkom;
   float temp;
@@ -58,7 +59,7 @@ typedef struct SAttitude { // definition d'un segment
 
 typedef union SBlackBox {
   SAttitude satt;
-  uint8_t tab[];
+  uint8_t tab[88];
 } SBlackBox;
 
 
@@ -71,11 +72,11 @@ typedef struct SBoot { // definition d'un segment
 
 class SNotif {
   public:
-  SNotif(uint8_t type_, const char *title_, const char *msg_);
-  
-  uint8_t type;
-  String title;
-  String msg;
+    SNotif(uint8_t type_, const char *title_, const char *msg_);
+
+    uint8_t type;
+    String title;
+    String msg;
 };
 
 
@@ -90,11 +91,16 @@ class TLCD : public TSharpMem, public IntelliScreen {
     void updateAll(SAttitude *att);
     void updateScreen(void);
     void afficheSegments(void);
+    void afficheParcours(void);
     void afficheHRM(void);
     void afficheListePoints(uint8_t ligne, uint8_t ind_seg, uint8_t mode);
+    void afficheListeParcours(uint8_t ligne);
     void partner(float rtime, float curtime, uint8_t ind);
     void registerSegment(Segment *seg);
+    void registerParcours(Parcours *par);
+    void registerHisto(ListePoints *pts);
     void resetSegments(void);
+    void resetParcours(void);
 
     void afficheBoot();
     void afficheGPS();
@@ -118,24 +124,27 @@ class TLCD : public TSharpMem, public IntelliScreen {
     void setHDOP (unsigned long hdop_) {
       boot.hdop = hdop_;
     }
-    
+
 
   private:
     void traceLignes(void);
     void traceLignes_NS(void);
     void traceLignes_1S(void);
     void traceLignes_2S(void);
+    void traceLignes_PAR(void);
 
     SBoot boot;
     SAttitude att;
 
     uint8_t _ancs_mode;
     std::list<SNotif> l_notif;
-    
+
     uint8_t _nb_lignes_tot;
-    uint8_t _ss, _seg_act;
+    uint8_t _ss, _seg_act, _par_act;
     float _lat, _lon, _alt;
     Segment *_l_seg[2];
+    Parcours *_parc;
+    ListePoints *_points;
 };
 
 #endif

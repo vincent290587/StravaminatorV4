@@ -19,6 +19,22 @@ Point2D::Point2D(float lat, float lon) {
     _lon = lon;
 }
 
+Point2D & Point2D::operator=(const Point2D *point) {
+    if (point != 0) {
+        _lat = point->_lat;
+        _lon = point->_lon;
+        return *this;
+    } else {
+        return *this;
+    }
+}
+
+Point2D & Point2D::operator=(const Point2D &point) {
+    _lat = point._lat;
+    _lon = point._lon;
+    return *this;
+}
+
 Point::Point() {
     _lat = 0;
     _lon = 0;
@@ -151,6 +167,28 @@ float ListePoints::dist(Point *p_) {
   float maDist = 100000.;
   Point pCourant;
   std::list<Point>::iterator _iter;
+  
+  // on cherche la taille de fenetre
+  for (_iter = _lpoints.begin(); _iter != _lpoints.end(); _iter++) {
+
+    pCourant = *_iter.operator->();
+
+    if (maDist > pCourant.dist(p_)) {
+      maDist = pCourant.dist(p_);
+    }
+
+  }
+  return maDist;
+}
+
+float ListePoints::dist(float lat_, float lon_) {
+
+  float maDist = 100000.;
+  Point pCourant, p_;
+  std::list<Point>::iterator _iter;
+  
+  p_._lat = lat_;
+  p_._lon = lon_;
   
   // on cherche la taille de fenetre
   for (_iter = _lpoints.begin(); _iter != _lpoints.end(); _iter++) {

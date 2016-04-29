@@ -1,18 +1,28 @@
 
 uint32_t getLastAddress() {
 
+  uint8_t i;
   SWhiteBox whitebox;
-  memset(&whitebox, 0, sizeof(SWhiteBox));
+  memset(&whitebox, 0, sizeof(SInitTable));
 
-  sst.readArray(0, whitebox.tab, sizeof(SWhiteBox));
+  sst.readArray(TABLE, whitebox.tab, sizeof(SInitTable));
 
   if (whitebox.sinit.secret_code != SECRET_CODE) {
-    Serial.println("Formattage SST26VF");
-    sst.totalErase();
-    memset(&whitebox, 0, sizeof(SWhiteBox));
+    Serial.print("Formattage SST26VF: ");
+    Serial.println(whitebox.sinit.secret_code, HEX);
+
+    for (i=0; i <= NB_SECTORS_REC; i++) {
+      sst.block64Erase(i);
+    }
+    //sst.totalErase();
+    delay(5);
+
+    memset(&whitebox, 0, sizeof(SInitTable));
     whitebox.sinit.secret_code = SECRET_CODE;
     whitebox.sinit.last_data = SST_RECORDING_START;
-    sst.writeArray(0, whitebox.tab, sizeof(SWhiteBox));
+
+    sst.writeArray(TABLE, whitebox.tab, sizeof(SInitTable));
+
     return SST_RECORDING_START;
   } else {
     return whitebox.sinit.last_data;
@@ -23,38 +33,57 @@ uint32_t getLastAddress() {
 void incrementeAddress () {
 
   SWhiteBox whitebox;
-  memset(&whitebox, 0, sizeof(SWhiteBox));
+  memset(&whitebox, 0, sizeof(SInitTable));
 
-  sst.readArray(0, whitebox.tab, sizeof(SWhiteBox));
+  //sst.dumpArray(TABLE, sizeof(SInitTable));
+  sst.readArray(TABLE, whitebox.tab, sizeof(SInitTable));
 
   if (whitebox.sinit.secret_code != SECRET_CODE) {
-    Serial.println("Erreur code SST26VF");
+    Serial.print("Erreur code SST26VF: ");
+    Serial.println(whitebox.sinit.secret_code, HEX);
     return;
   } else {
     whitebox.sinit.secret_code = SECRET_CODE;
     whitebox.sinit.last_data += sizeof(SAttitude);
     whitebox.sinit.nb_data += 1;
-    sst.writeArray(0, whitebox.tab, sizeof(SWhiteBox));
+    sst.sectorErase(0);
+    delay(1);
+    sst.writeArray(TABLE, whitebox.tab, sizeof(SInitTable));
+    //sst.dumpArray(TABLE, sizeof(SInitTable));
   }
 
 }
 
 
 void dumpLogGPS() {
-  return;
-  if (gpx.isOpen()) gpx.close();
-  if (gpx.open("today.csv", O_READ)) {
 
-    while (gpx.available()) {
-      Serial.write(gpx.read());
-    }
-    Serial.flush();
-    gpx.close();
+  uint32_t i, adr_log;
+  SWhiteBox whitebox;
+  SBlackBox bbox;
+  memset(&whitebox, 0, sizeof(SInitTable));
+
+  sst.readArray(TABLE, whitebox.tab, sizeof(SInitTable));
+
+  if (whitebox.sinit.secret_code != SECRET_CODE) return;
+
+  Serial.println("Dump du log:");
+
+  for (i = 0; i < whitebox.sinit.nb_data; i++) {
+
+    adr_log = SST_RECORDING_START + i * sizeof(SAttitude);
+
+    sst.readArray(adr_log, bbox.tab, sizeof(SAttitude));
+
+    Serial.print("Points actifs: 0x");
+    Serial.print(adr_log, HEX);
+    Serial.print("  ");
+    Serial.println(bbox.satt.nbpts);
+    
   }
-  return;
 }
 
 void loggerMsg(const char *msg_) {
+
   Serial.println(msg_);
 
   if (gpx.isOpen()) gpx.close();
@@ -67,6 +96,7 @@ void loggerMsg(const char *msg_) {
 }
 
 void loggerMsg(int val_) {
+
   Serial.println(val_);
 
   if (gpx.isOpen()) gpx.close();
@@ -103,7 +133,7 @@ void loggerMsg(float val_1, float val_2) {
 void loggerHT() {
 
   static int header_ecrit = 0;
-  return;
+
   if (gpx.isOpen()) gpx.close();
   if (gpx.open("ht.csv", O_WRITE | O_CREAT | O_APPEND)) {
 
@@ -135,7 +165,7 @@ void loggerHT() {
 void loggerRR() {
 
   static int header_ecrit = 0;
-  return;
+
   if (gpx.isOpen()) gpx.close();
   if (gpx.open("rr.csv", O_WRITE | O_CREAT | O_APPEND)) {
 
@@ -161,8 +191,11 @@ void loggerRR() {
 
 void loggerData() {
 
-  uint32_t address_write = getLastAddress();
+#ifdef __DEBUG__
+  uint32_t address_write;
   SBlackBox bbox;
+
+  address_write = getLastAddress();
 
   memcpy(&bbox.satt, &att, sizeof(SAttitude));
   sst.writeArray(address_write, bbox.tab, sizeof(SAttitude));
@@ -170,7 +203,9 @@ void loggerData() {
   // update current address
   incrementeAddress();
 
+
   return;
+#endif
 
   static int header_ecrit = 0;
 
@@ -202,7 +237,7 @@ void ecrireHeader () {
 
 void positionEcrit () {
 
-  static char dataTW[20];
+  char dataTW[20];
 
   mondtostrf(att.lat, 11, 7, dataTW);
   dataTW[11] = '\0';

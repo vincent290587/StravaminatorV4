@@ -92,15 +92,15 @@ void Merite::majPower(ListePoints *mes_points, float speed_) {
 
   if (!mes_points) return;
 
-  if (mes_points->longueur() <= FILTRE_NB) return;
+  if (mes_points->longueur() <= FILTRE_NB + 1) return;
 
   P1 = mes_points->getFirstPoint();
-  P2 = mes_points->getPointAt(FILTRE_NB - 1);
+  P2 = mes_points->getPointAt(FILTRE_NB);
 
   dElev = P1._alt   - P2._alt;
   dTime = P1._rtime - P2._rtime;
 
-  if (fabs(dTime) > 3.) {
+  if (fabs(dTime) > 1.5) {
 
     // STEP 1 : on filtre altitude et vitesse
     //  =>l'elevation de la liste est inversee, le temps aussi

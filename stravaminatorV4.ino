@@ -16,6 +16,7 @@
 #include "Merites.h"
 #include "ListePoints.h"
 #include "Segment.h"
+#include "Parcours.h"
 #include "define.h"
 
 
@@ -28,6 +29,7 @@ Nordic nordic;
 Merite cumuls;
 
 SPIFFS25 sst;
+
 Adafruit_BMP085_Unified bmp = Adafruit_BMP085_Unified(10085);
 
 STC3100 stc = STC3100(0x70);
@@ -48,6 +50,7 @@ void setup() {
   delay(5);
   display.resetBuffer();
   display.updateScreen();
+  display.registerHisto(&mes_points);
 
 #ifdef __DEBUG__
   uint8_t safe = 0;
@@ -71,7 +74,7 @@ void setup() {
     Serial.println(F("Ooops, no BMP085 detected ... Check your wiring or I2C ADDR!"));
   }
 
-    /* Initialise the sensor */
+  /* Initialise the sensor */
   if (!stc.begin(25))
   {
     /* There was a problem detecting the BMP085 ... check your connections */
@@ -80,6 +83,12 @@ void setup() {
 
   // on demarre la SPI flash
   sst.begin(memCs, memWp, memHold);
+
+  sst.globalUnlock();
+#ifdef __DEBUG__
+  dumpLogGPS();
+  sst.totalErase();
+#endif
 
   if (!sd.begin(sd_cs, SPI_HALF_SPEED)) {
     Serial.println(F("Card initialization failed."));
@@ -106,9 +115,10 @@ void setup() {
     display.setModeAffi(MODE_GPS);
     display.updateScreen();
     delay(400);
+    Serial.println("Fin setup");
   }
   att.has_started = 1;
-  }
+}
 
 
 void serialEvent() {
@@ -228,7 +238,8 @@ void loop() {
   att.pbatt = percentageBatt(batt_data.Voltage);
   att.vbatt = batt_data.Voltage;
 
-#ifdef __DEBUG__
+
+#ifdef __DEBUG_STC__
   Serial.print("Temperature STC :    ");
   Serial.print(batt_data.Temperature, 2);
   Serial.println(" degres C");
@@ -264,6 +275,10 @@ void loop() {
       att.gpsalt = gps.f_altitude();
       att.speed = gps.f_speed_kmph();
       att.secj = get_sec_jour();
+      
+      // maj BMP
+      updateAltitude(&att.alt);
+      
       mes_points.enregistrePos(att.lat, att.lon, att.alt, att.secj);
 
       // maj merites
@@ -276,7 +291,7 @@ void loop() {
         goto piege;
       } else if (att.nbpts == MIN_POINTS) {
         // maj BMP
-        updateAltitudeOffset ();
+        updateAltitudeOffset(&att.alt);
         // maj
         display.setModeCalcul(MODE_CRS);
         display.setModeAffi(MODE_CRS);
@@ -284,9 +299,6 @@ void loop() {
         att.nbsec_act = 1;
       }
 
-      // maj BMP
-      updateAltitude();
-    
       att.dist = cumuls.getDistance();
       att.climb = cumuls.getClimb();
 
@@ -316,6 +328,7 @@ void loop() {
   switch (display.getModeAffi()) {
     case MODE_GPS:
     case MODE_CRS:
+    case MODE_PAR:
       display.updateAll(&att);
       break;
     case MODE_SIMU:
@@ -334,7 +347,7 @@ piege:
   while (cond_wait() == 1) {
     idle();
   }
-  
+
 }
 
 void idle() {

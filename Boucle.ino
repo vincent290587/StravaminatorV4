@@ -29,6 +29,7 @@ uint8_t cond_wait () {
         return 0;
       }
     case MODE_CRS:
+    case MODE_PAR:
       if (new_gps_data != 0) {
         millis_ = millis();
         return 0;
@@ -114,11 +115,12 @@ void boucle_outdoor () {
 
 
 #ifdef __DEBUG__
-  Serial.print("Next Seg: "); Serial.print(min_dist_seg); Serial.print("   FreeRam:  "); Serial.print(myFreeRam()); Serial.print("  ");
+  Serial.print("Next Seg: "); Serial.print(min_dist_seg); Serial.print("  ");
   Serial.print("Nb seg actifs: "); Serial.print(att.nbact); Serial.print("  ");
-  printTime();
-  att.pwr = 425;
-  att.speed = 28.5;
+  time_c = millis() - start;
+  Serial.print(F("Temps de la boucle:  ")); Serial.print(time_c); Serial.println(F("ms"));
+  //att.pwr = 425;
+  //att.speed = 28.5;
 #endif
 }
 
