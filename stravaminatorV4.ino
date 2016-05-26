@@ -5,6 +5,7 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP085_U.h>
+#include <Adafruit_GPS.h>
 #include <STC3100.h>
 #include <list>
 #include <avr/sleep.h>
@@ -33,6 +34,8 @@ SPIFFS25 sst;
 Adafruit_BMP085_Unified bmp = Adafruit_BMP085_Unified(10085);
 
 STC3100 stc = STC3100(0x70);
+
+Adafruit_GPS pmkt(&Serial1);
 
 void setup() {
   att.has_started = 0;
@@ -67,11 +70,14 @@ void setup() {
 
   Serial.println("Debut");
 
+  // init GPS
+  pmkt.sendCommand("$PMTK314,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0*29");
+
   /* Initialise the sensor */
   if (!bmp.begin())
   {
     /* There was a problem detecting the BMP085 ... check your connections */
-    Serial.println(F("Ooops, no BMP085 detected ... Check your wiring or I2C ADDR!"));
+    Serial.println(F("Ooops, no BMP180 detected ... Check your wiring or I2C ADDR!"));
   }
 
   /* Initialise the sensor */
@@ -94,8 +100,7 @@ void setup() {
     Serial.println(F("Card initialization failed."));
     display.setSD(-1);
     display.updateScreen();
-    tone(speakerPin, 6440, 2000);
-    delay(1000);
+    errorTone();
     display.setModeCalcul(MODE_HRM);
     display.setModeAffi(MODE_HRM);
     display.updateScreen();
@@ -159,7 +164,8 @@ void serialEvent1() {
     c = Serial1.read();
     //Serial.write(c);
     if (mode_simu == 0) {
-      if (gps.encode(c)) {
+      if (gps.encode(c) && gps.getFixTime() > lastFix + 500) {
+        lastFix = gps.getFixTime();
         new_gps_data = 1;
       }
     }
@@ -183,6 +189,9 @@ void serialEvent3() {
       case _SENTENCE_ANCS:
         new_ancs_data = 1;
         break;
+      case _SENTENCE_BTN:
+        new_btn_data = 1;
+        break;
       case _SENTENCE_DBG:
         new_dbg_data = 1;
         break;
@@ -200,18 +209,25 @@ void loop() {
 #ifdef __DEBUG__
   digitalWriteFast(led, LOW);
   Serial.println("LOOP");
+
+  Serial.println(String("Satellites used: ") + gps.sview());
 #endif
 
   // vidage des buffer Serials
   yield();
 
   // maj nordic
+  if (new_btn_data) {
+    new_btn_data=0;
+    buttonEvent(nordic.getBTN());
+    display.updateScreen();
+  }
   if (new_hrm_data) {
     att.bpm = nordic.getBPM();
     att.rrint = nordic.getRR();
   }
   if (new_cad_data && nordic.getRPM()) att.cad_rpm = nordic.getRPM();
-  if (new_hrm_data && nordic.getSpeed() > 0.) att.cad_speed = nordic.getSpeed();
+  if (new_cad_data && nordic.getSpeed() > 0.) att.cad_speed = nordic.getSpeed();
   if (new_ancs_data) {
     if (alertes_nb < 20) {
       alertes_nb += 1;
@@ -238,6 +254,9 @@ void loop() {
   att.pbatt = percentageBatt(batt_data.Voltage);
   att.vbatt = batt_data.Voltage;
 
+#ifdef __DEBUG__
+  Serial.println(String("Satellites in view: ") + gps.sview());
+#endif
 
 #ifdef __DEBUG_STC__
   Serial.print("Temperature STC :    ");
@@ -258,13 +277,25 @@ void loop() {
   new_hrm_data = 0;
   new_cad_data = 0;
   new_ancs_data = 0;
+  new_btn_data = 0;
   new_dbg_data = 0;
   download_request = 0;
   upload_request = 0;
 
+  // si pas de fix on affiche la page d'info GPS
+  if (att.nbpts > MIN_POINTS + 10 && !gps.isDataValid() && display.getModeAffi() != MODE_GPS) {
+    pmkt.sendCommand("$PMTK314,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0*29");
+    display.setStoredMode(display.getModeAffi());
+    display.setModeAffi(MODE_GPS);
+  } else if (att.nbpts > MIN_POINTS + 10 && gps.isDataValid() && display.getModeAffi() == MODE_GPS) {
+    pmkt.sendCommand("$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28");
+    display.setModeAffi(display.getStoredMode());
+  }
+
+  // aiguillage pour chaque type d'affichage
   switch (display.getModeCalcul()) {
     case MODE_GPS:
-      display.setNbSat(gps.satellites());
+      display.setNbSat((uint16_t)gps.sview());
       display.setHDOP(gps.hdop());
     case MODE_CRS:
       // recup infos gps
@@ -285,11 +316,14 @@ void loop() {
       if (att.nbpts < MIN_POINTS) {
         // maj sharp
         display.updateAll(&att);
+
         if (att.nbpts < 4) {
           basicShort();
         }
         goto piege;
       } else if (att.nbpts == MIN_POINTS) {
+        // maj GPS
+        pmkt.sendCommand("$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28");
         // maj BMP
         updateAltitudeOffset(&att.alt);
         // maj
@@ -390,6 +424,21 @@ void buttonUpEvent () {
 
 void buttonPressEvent () {
   display.buttonPressEvent();
+}
+
+
+void buttonEvent (uint8_t evt) {
+  switch (evt) {
+    case 3:
+      buttonPressEvent();
+      break;
+    case 2:
+      buttonUpEvent ();
+      break;
+    case 1:
+      buttonDownEvent();
+      break;
+  }
 }
 
 void activerNavigateur() {

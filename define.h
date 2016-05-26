@@ -32,11 +32,13 @@ static unsigned long age;
 
 static unsigned long start;
 static unsigned long time_c = 0;
+static unsigned long lastFix = 0;
 
 static uint8_t new_gps_data = 0;
 static uint8_t new_hrm_data = 0;
 static uint8_t new_cad_data = 0;
 static uint8_t new_ancs_data = 0;
+static uint8_t new_btn_data = 0;
 static uint8_t new_dbg_data = 0;
 static uint8_t download_request = 0;
 static uint8_t upload_request = 0;

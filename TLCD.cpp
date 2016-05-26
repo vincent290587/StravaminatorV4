@@ -16,8 +16,8 @@ TLCD::TLCD(uint8_t ss) : TSharpMem(SPI_CLK, SPI_MOSI, ss) {
   _parc = NULL;
   _points = NULL;
 
-  addMenuItem(" Mode course");
-  addMenuItem(" Mode parcours");
+  addMenuItem(" Mode CRS");
+  addMenuItem(" Mode PRC");
   addMenuItem(" Mode HRM");
   addMenuItem(" Mode HT");
   addMenuItem(" Mode simu");

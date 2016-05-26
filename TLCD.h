@@ -118,11 +118,15 @@ class TLCD : public TSharpMem, public IntelliScreen {
     void setNbSeg(int16_t nb_) {
       boot.nb_seg = nb_;
     }
-    void setNbSat(int16_t nb_) {
+    void setNbSat(uint16_t nb_) {
       boot.nb_sat = nb_;
     }
     void setHDOP (unsigned long hdop_) {
-      boot.hdop = hdop_;
+      if (hdop_ > 255) {
+        boot.hdop = 255;
+      } else {
+        boot.hdop = hdop_;
+      }
     }
 
 
