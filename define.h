@@ -19,6 +19,8 @@
 
 static uint8_t BL_level = 180;
 
+const uint8_t virtbtn0 = 2; // PTD0
+const uint8_t virtbtn1 = 14; // PTD1
 const uint8_t led = 17;
 const uint8_t sd_cs = 22;// PTC1
 

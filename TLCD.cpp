@@ -115,8 +115,7 @@ void TLCD::cadran(uint8_t p_lig, uint8_t p_col, const char *champ, String  affi,
 
 void TLCD::traceLignes(void) {
 
-  if (_par_act > 0) {
-
+  if (getModeAffi() == MODE_PAR) {
     traceLignes_PAR();
     return;
   }
@@ -177,6 +176,10 @@ void TLCD::traceLignes_PAR(void) {
 
   drawFastVLine(LCDWIDTH / 2, 0, LCDHEIGHT * 3 / _nb_lignes_tot, BLACK);
 
+  if (_seg_act == 0) {
+    drawFastVLine(LCDWIDTH / 2, LCDHEIGHT * 3 / _nb_lignes_tot, LCDHEIGHT / _nb_lignes_tot, BLACK);
+  }
+
   for (ind1 = 0; ind1 < 4; ind1++)
     drawFastHLine(0, LCDHEIGHT / NB_LIG * (ind1 + 1), LCDWIDTH, BLACK);
 
@@ -203,12 +206,16 @@ void TLCD::updateScreen(void) {
       break;
     case MODE_CRS:
       setModeCalcul(MODE_CRS);
-      if (_par_act > 0) setModeAffi(MODE_PAR);
       afficheSegments();
       break;
     case MODE_PAR:
       setModeCalcul(MODE_CRS);
-      afficheParcours();
+      if (_par_act == 0) {
+        setModeAffi(MODE_CRS);
+        afficheSegments();
+      } else {
+        afficheParcours();
+      }
       break;
     case MODE_HRM:
       afficheHRM();
@@ -740,11 +747,20 @@ void TLCD::afficheListeParcours(uint8_t ligne) {
 
   if (_seg_act > 0 && _l_seg[0]) {
     if (_l_seg[0]->getListePoints()) {
+
+      // avance segment
+      setTextSize(3);
+      setCursor(maDpex + 15, maDpey - 20);
+      print(String(_l_seg[0]->getAvance(), 1));
+
+      // fin segment
       Point *dpseg = _l_seg[0]->getListePoints()->getLastPoint();
       maDpex = regFenLim(dpseg->_lon, minLon, maxLon, 0, LCDWIDTH);
       maDpey = regFenLim(dpseg->_lat, minLat, maxLat, fin_cadran, debut_cadran);
-      drawCircle(maDpex, maDpey, 8, BLACK);
-      print(String(_l_seg[0]->getAvance(), 1));
+      if ((dpseg->_lon > minLon && dpseg->_lon < maxLon) &&
+          (dpseg->_lat > minLat && dpseg->_lat < maxLat)) {
+        drawCircle(maDpex, maDpey, 8, BLACK);
+      }
 
       // completion
       setTextSize(2);

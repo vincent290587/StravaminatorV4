@@ -46,6 +46,12 @@ void setup() {
   pinMode(led, OUTPUT);
   digitalWriteFast(led, HIGH);
 
+  // pseudo boutons
+  pinMode(virtbtn0, OUTPUT);
+  digitalWriteFast(virtbtn0, HIGH);
+  pinMode(virtbtn1, OUTPUT);
+  digitalWriteFast(virtbtn1, HIGH);
+
   memset(&att, 0, sizeof(SAttitude));
 
   delay(50);
@@ -233,7 +239,7 @@ void loop() {
       alertes_nb += 1;
     }
     String tmp = String ("") + nordic.getANCS_title() + nordic.getANCS_msg();
-    if (tmp.indexOf("Appel") > 0 || tmp.indexOf("essage") > 0) otherTone();
+    if (tmp.indexOf("Appel") > 0 || tmp.indexOf("essage") > 0) basicTone();
     display.notifyANCS(nordic.getANCS_type(), nordic.getANCS_title(), nordic.getANCS_msg());
   }
   if (new_dbg_data) {
@@ -318,14 +324,16 @@ void loop() {
         display.updateAll(&att);
 
         if (att.nbpts < 4) {
-          basicShort();
+          basicTone();
         }
         goto piege;
       } else if (att.nbpts == MIN_POINTS) {
         // maj GPS
         pmkt.sendCommand("$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28");
-        // maj BMP
+        // maj BMP 1
         updateAltitudeOffset(&att.alt);
+        // maj BMP 2
+        updateAltitude(&att.alt);
         // maj
         display.setModeCalcul(MODE_CRS);
         display.setModeAffi(MODE_CRS);
@@ -396,19 +404,19 @@ void idle() {
 
 void usage_fault_isr(void) {
   digitalWrite(led, HIGH);
-  basicLong();
+  errorTone();
   CPU_RESTART
 }
 
 void software_isr(void) {
   digitalWrite(led, HIGH);
-  basicLong();
+  errorTone();
   CPU_RESTART
 }
 
 void hard_fault_isr(void) {
   digitalWrite(led, HIGH);
-  basicLong();
+  errorTone();
   CPU_RESTART
 }
 

@@ -10,14 +10,15 @@ uint8_t cond_wait () {
   }
 
   if (display.getPendingAction() != NO_ACTION) {
-    desactiverNavigateur();
     display.updateScreen();
-    // debounce
-    delay(100);
-    activerNavigateur();
   }
 
   if (millis() - millis_ > 1500) {
+    millis_ = millis();
+    return 0;
+  }
+
+  if (new_btn_data != 0) {
     millis_ = millis();
     return 0;
   }
@@ -90,7 +91,7 @@ void boucle_outdoor () {
           if (seg->getAvance() > 0.) {
             att.nbpr++;
             att.nbkom++;
-            segEndTone();
+            victoryTone ();
           }
         } else if (seg->getStatus() == SEG_ON && order_glasses == 0) {
           Serial3.println(Nordic::encodeOrder(seg->getAvance(), seg->getCur()));
@@ -128,7 +129,13 @@ void boucle_simu () {
 
     static float avance = -15.;
 
+    Serial.println("Boucle simu");
+
     Serial3.println(Nordic::encodeOrder(avance, 100));
+
+    delay(100);
+
+    errorTone();
 
     avance += 1.;
 

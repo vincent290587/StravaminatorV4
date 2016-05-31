@@ -1,35 +1,28 @@
 void basicTone() {
+  digitalWriteFast(virtbtn0, LOW);
+  delay(130);
+  digitalWriteFast(virtbtn0, HIGH);
 }
 
-void basicShort() {
-}
-
-void basicLong() {
-}
-
-void otherTone() {
+void errorTone() {
+  digitalWriteFast(virtbtn0, LOW);
+  delay(130);
+  digitalWriteFast(virtbtn0, HIGH);
 }
 
 
 void victoryTone () {
-  
-  //int delay_=0;
-  
-  basicLong();
+  digitalWriteFast(virtbtn1, LOW);
+  delay(130);
+  digitalWriteFast(virtbtn1, HIGH);
 }
 
 void segStartTone () {
-
-  //int delay_=0;
-  
   basicTone();
 }
 
 void segEndTone () {
-
-  //int delay_=0;
-  
-  basicLong();
+  basicTone();
 }
 
 
