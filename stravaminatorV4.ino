@@ -309,7 +309,14 @@ void loop() {
       if (!isGpsDataValid(att.lat, att.lon, age)) goto piege;
       att.nbpts++;
 
-      att.gpsalt = gps.f_altitude();
+      if (gps.f_altitude() < 5000.) {
+        att.gpsalt = gps.f_altitude();
+      } else if (att.nbpts <= MIN_POINTS) {
+        att.gpsalt = 0.;
+      } else {
+        att.gpsalt = att.alt;
+      }
+      
       att.speed = gps.f_speed_kmph();
       att.secj = get_sec_jour();
       
@@ -330,11 +337,9 @@ void loop() {
       } else if (att.nbpts == MIN_POINTS) {
         // maj GPS
         pmkt.sendCommand("$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28");
-        // maj BMP 1
+        // maj BMP
         updateAltitudeOffset(&att.alt);
-        // maj BMP 2
-        updateAltitude(&att.alt);
-        // maj
+        // mode switch
         display.setModeCalcul(MODE_CRS);
         display.setModeAffi(MODE_CRS);
         att.secj_prec = att.secj;

@@ -114,11 +114,12 @@ void boucle_outdoor () {
 
   att.next = min_dist_seg;
 
+  time_c = millis() - start;
 
 #ifdef __DEBUG__
   Serial.print("Next Seg: "); Serial.print(min_dist_seg); Serial.print("  ");
   Serial.print("Nb seg actifs: "); Serial.print(att.nbact); Serial.print("  ");
-  time_c = millis() - start;
+  
   Serial.print(F("Temps de la boucle:  ")); Serial.print(time_c); Serial.println(F("ms"));
   //att.pwr = 425;
   //att.speed = 28.5;

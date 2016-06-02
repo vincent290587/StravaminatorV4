@@ -64,11 +64,6 @@ float get_sec_jour()
   return res;
 }
 
-void printTime() {
-  time_c = millis() - start;
-  Serial.print(F("Temps de la boucle:  ")); Serial.print(time_c); Serial.println(F("ms"));
-}
-
 void resetdelay_() {
   start = millis();
 }
