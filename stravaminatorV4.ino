@@ -21,7 +21,7 @@
 #include "define.h"
 
 
-TLCD display(sd_sharp);
+TLCD display(sharp_cs);
 
 TinyGPS gps;
 
@@ -63,7 +63,6 @@ void setup() {
 
 #ifdef __DEBUG__
   uint8_t safe = 0;
-  //digitalWriteFast(led, LOW);
   while (!Serial) {
     delay(1000);
     safe++;
@@ -97,7 +96,7 @@ void setup() {
   sst.begin(memCs, memWp, memHold);
 
   sst.globalUnlock();
-#ifdef __DEBUG__
+#ifdef __SST__
   dumpLogGPS();
   sst.totalErase();
 #endif
@@ -183,7 +182,7 @@ void serialEvent3() {
   uint8_t format = 0;
   while (Serial3.available() && att.has_started > 0) {
     c = Serial3.read();
-    Serial.write(c);
+    //Serial.write(c);
     format = nordic.encode(c);
     switch (format) {
       case _SENTENCE_HRM:
@@ -216,7 +215,7 @@ void loop() {
   digitalWriteFast(led, LOW);
   Serial.println("LOOP");
 
-  Serial.println(String("Satellites used: ") + gps.sview());
+  Serial.println(String("Satellites in view: ") + gps.sview());
 #endif
 
   // vidage des buffer Serials
@@ -239,7 +238,7 @@ void loop() {
       alertes_nb += 1;
     }
     String tmp = String ("") + nordic.getANCS_title() + nordic.getANCS_msg();
-    if (tmp.indexOf("Appel") > 0 || tmp.indexOf("essage") > 0) basicTone();
+    if (tmp.indexOf("ppel") > 0 || tmp.indexOf("essage") > 0) basicTone();
     display.notifyANCS(nordic.getANCS_type(), nordic.getANCS_title(), nordic.getANCS_msg());
   }
   if (new_dbg_data) {
@@ -253,16 +252,20 @@ void loop() {
       Serial.println("Erreur lors de la MaJ");
     }
   }
+  
+    
+  // backlight
+  if (display.getBackLight() != 0) {
+	  digitalWriteFast(led, LOW);
+  }
 
-  /* Get a new measurement */
+
+  // Get a new STC measurement
   stc.getBatteryData(&batt_data);
   att.cbatt = batt_data.Current;
   att.pbatt = percentageBatt(batt_data.Voltage);
   att.vbatt = batt_data.Voltage;
 
-#ifdef __DEBUG__
-  Serial.println(String("Satellites in view: ") + gps.sview());
-#endif
 
 #ifdef __DEBUG_STC__
   Serial.print("Temperature STC :    ");
@@ -390,7 +393,10 @@ void loop() {
 piege:
   display.updateScreen();
 
+#ifdef __DEBUG__
   digitalWriteFast(led, HIGH);
+#endif
+
   while (cond_wait() == 1) {
     idle();
   }

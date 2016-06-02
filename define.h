@@ -2,10 +2,6 @@
 #define CPU_RESTART_VAL 0x5FA0004
 #define CPU_RESTART (*CPU_RESTART_ADDR = CPU_RESTART_VAL);
 
-// any pins can be used
-#define sd_sharp 23
-#define speakerPin 18
-
 #define TAILLE_LIGNE 250
 #define TAILLE_MAX  50
 
@@ -16,6 +12,7 @@
 
 //#define __DEBUG__
 //#define __DEBUG_STC__
+//#define __SST__
 
 static uint8_t BL_level = 180;
 
@@ -23,6 +20,8 @@ const uint8_t virtbtn0 = 2; // PTD0
 const uint8_t virtbtn1 = 14; // PTD1
 const uint8_t led = 17;
 const uint8_t sd_cs = 22;// PTC1
+
+const uint8_t sharp_cs = 23;
 
 const uint8_t memCs = 15; //chip select      PTC0
 const uint8_t memWp = 41; //write protection PTB23

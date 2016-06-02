@@ -1,4 +1,5 @@
 
+#ifdef __SST__
 uint32_t getLastAddress() {
 
   uint8_t i;
@@ -53,6 +54,7 @@ void incrementeAddress () {
   }
 
 }
+#endif
 
 
 void dumpLogGPS() {
@@ -110,19 +112,14 @@ void loggerMsg(int val_) {
 
 void loggerMsg(float val_1, float val_2) {
 
-  char dataTW[23];
+  String _line = "";
 
   if (gpx.isOpen()) gpx.close();
   if (gpx.open("errlog.txt", O_WRITE | O_CREAT | O_APPEND)) {
-    mondtostrf(val_1, 11, 7, dataTW);
-    dataTW[11] = '\0';
-    gpx.print(dataTW);
-
-    gpx.print("@");
-
-    mondtostrf(val_2, 11, 7, dataTW);
-    dataTW[11] = '\0';
-    gpx.println(dataTW);
+	  
+	_line += String(val_1, 7) + "@" + String(val_2, 7);
+    gpx.println(_line);
+	
     // fclose
     gpx.close();
   }
@@ -151,8 +148,6 @@ void loggerHT() {
     //TODO
     //gpx.print(calcul_puissance());gpx.print(",");
 
-    gpx.println(att.vbatt * 1000.);
-
     // fclose
     gpx.close();
 
@@ -180,8 +175,6 @@ void loggerRR() {
 
     gpx.print(att.rrint); gpx.print(",");
 
-    gpx.println(att.vbatt * 1000.);
-
     // fclose
     gpx.close();
 
@@ -191,7 +184,7 @@ void loggerRR() {
 
 void loggerData() {
 
-#ifdef __DEBUG__
+#ifdef __SST__
   uint32_t address_write;
   SBlackBox bbox;
 
@@ -231,51 +224,28 @@ void loggerData() {
 void ecrireHeader () {
 
   gpx.print(F("Latitude,Longitude,Elevation,SecJour,HRM,"));
-  gpx.println(F("CAD,Temp,GPSElevation,NsegActifs,PVBatt,Loop"));
+  gpx.println(F("CAD,Temp,GPSElevation,Vbatt,Cbatt,Loop"));
 
 }
 
+
 void positionEcrit () {
 
-  char dataTW[20];
+  String _line = "";
 
-  mondtostrf(att.lat, 11, 7, dataTW);
-  dataTW[11] = '\0';
-  gpx.print(dataTW); gpx.print(",");
+  _line += String(att.lat, 7) + ",";
+  _line += String(att.lon, 7) + ",";
+  _line += String(att.alt, 2) + ",";
+  _line += String(att.secj) + ",";
+  _line += String(att.bpm) + ",";
+  _line += String(att.cad_rpm) + ",";
+  _line += String(att.temp, 1) + ",";
+  _line += String(att.gpsalt, 2) + ",";
+  _line += String(att.vbatt, 3) + ",";
+  _line += String(att.cbatt, 3) + ",";
+  _line += String(time_c);
 
-  mondtostrf(att.lon, 11, 7, dataTW);
-  dataTW[11] = '\0';
-  gpx.print(dataTW); gpx.print(",");
-
-  mondtostrf(att.alt, 7, 2, dataTW);
-  dataTW[11] = '\0';
-  gpx.print(dataTW); gpx.print(",");
-
-  mondtostrf(att.secj, 9, 3, dataTW);
-  dataTW[11] = '\0';
-  gpx.print(dataTW); gpx.print(",");
-
-  gpx.print(att.bpm); gpx.print(",");
-
-  gpx.print(att.cad_rpm); gpx.print(",");
-
-  mondtostrf(att.temp, 7, 2, dataTW);
-  dataTW[11] = '\0';
-  gpx.print(dataTW); gpx.print(",");
-
-  mondtostrf(att.gpsalt, 7, 2, dataTW);
-  dataTW[11] = '\0';
-  gpx.print(dataTW); gpx.print(",");
-
-  mondtostrf(att.vbatt, 6, 3, dataTW);
-  dataTW[11] = '\0';
-  gpx.print(dataTW); gpx.print(",");
-
-  mondtostrf(att.cbatt, 6, 3, dataTW);
-  dataTW[11] = '\0';
-  gpx.print(dataTW); gpx.print(",");
-
-  gpx.println(time_c);
+  gpx.println(_line);
 
 }
 

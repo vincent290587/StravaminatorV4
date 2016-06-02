@@ -117,12 +117,8 @@ void boucle_outdoor () {
   time_c = millis() - start;
 
 #ifdef __DEBUG__
-  Serial.print("Next Seg: "); Serial.print(min_dist_seg); Serial.print("  ");
-  Serial.print("Nb seg actifs: "); Serial.print(att.nbact); Serial.print("  ");
-  
-  Serial.print(F("Temps de la boucle:  ")); Serial.print(time_c); Serial.println(F("ms"));
-  //att.pwr = 425;
-  //att.speed = 28.5;
+  Serial.println(String(F("Next Seg: ")) + min_dist_seg + F("  /  Nb seg actifs: ") + att.nbact);
+  Serial.println(String(F("Temps de la boucle:  ")) + time_c + F("ms"));
 #endif
 }
 
@@ -135,8 +131,6 @@ void boucle_simu () {
     Serial3.println(Nordic::encodeOrder(avance, 100));
 
     delay(100);
-
-    errorTone();
 
     avance += 1.;
 
