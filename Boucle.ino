@@ -130,9 +130,7 @@ void boucle_simu () {
 
     Serial3.println(Nordic::encodeOrder(avance, 100));
 
-    delay(100);
-
-    avance += 1.;
+    avance += 0.5;
 
     if (avance > 15.) {
       avance = -15.;

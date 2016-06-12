@@ -3,7 +3,6 @@
 #define CPU_RESTART (*CPU_RESTART_ADDR = CPU_RESTART_VAL);
 
 #define TAILLE_LIGNE 250
-#define TAILLE_MAX  50
 
 #define TABLE                 0x00000000
 #define SECRET_CODE           0xDEADBEEF

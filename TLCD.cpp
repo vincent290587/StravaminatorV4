@@ -264,7 +264,7 @@ void TLCD::afficheGPS() {
   println("GPS...");
   println("");
   setTextSize(2);
-  println( String(" Sat:  ") + boot.nb_sat);
+  println( String(" Sat:  ") + boot.nb_satU + " / " + boot.nb_satIV);
   println("");
   println( String(" HDOP: ") + boot.hdop);
   println("");
@@ -352,7 +352,7 @@ void TLCD::afficheSegments(void) {
     cadran(3, 1, "CAD", String(att.cad_rpm), "rpm");
     cadran(3, 2, "HRM", String(att.bpm), "bpm");
     cadran(4, 1, "PR", String(att.nbpr), 0);
-    cadran(4, 2, "KOM", String(att.nbkom), 0);
+    cadran(4, 2, "I", String((int)att.cbatt), "mA");
 
     traceLignes();
 
@@ -400,14 +400,14 @@ void TLCD::afficheParcours(void) {
 
     // ligne colonne
     cadran(1, 1, "Dist", String(att.dist / 1000., 1), "km");
-    cadran(1, 2, "Speed", String(att.speed, 1), "km/h");
-    cadran(2, 1, "HRM", String(att.bpm), "bpm");
-    cadran(2, 2, "Vmoy", String(vmoy, 2), "km/h");
+    cadran(1, 2, "Pwr", String(att.pwr), "W");
+    cadran(2, 1, "Speed", String(att.speed, 1), "km/h");
+    cadran(2, 2, "Climb", String(att.climb, 0), "m");
     cadran(3, 1, "CAD", String(att.cad_rpm), "rpm");
-    cadran(3, 2, "PR", String(att.nbpr), 0);
+    cadran(3, 2, "HRM", String(att.bpm), "bpm");
     cadran(4, 1, "Batt", String(att.pbatt), "%");
-    cadran(4, 2, "Dur", String(hrs) + ":" + mins, 0);
-
+    cadran(4, 2, "Vmoy", String(vmoy, 2), "km/h");
+    //cadran(4, 2, "Dur", String(hrs) + ":" + mins, 0);
 
     afficheListeParcours(NB_LIG - 2);
 
@@ -418,12 +418,11 @@ void TLCD::afficheParcours(void) {
 
     // ligne colonne
     cadran(1, 1, "Dist", String(att.dist / 1000., 1), "km");
-    cadran(1, 2, "Speed", String(att.speed, 1), "km/h");
-    cadran(2, 1, "HRM", String(att.bpm), "bpm");
-    cadran(2, 2, "Vmoy", String(vmoy, 2), "km/h");
+    cadran(1, 2, "Pwr", String(att.pwr), "W");
+    cadran(2, 1, "Speed", String(att.speed, 1), "km/h");
+    cadran(2, 2, "Climb", String(att.climb, 0), "m");
     cadran(3, 1, "CAD", String(att.cad_rpm), "rpm");
-    cadran(3, 2, "PR", String(att.nbpr), 0);
-
+    cadran(3, 2, "HRM", String(att.bpm), "bpm");
 
     afficheListeParcours(NB_LIG - 2);
 

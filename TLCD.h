@@ -65,7 +65,8 @@ typedef union SBlackBox {
 
 typedef struct SBoot { // definition d'un segment
   int16_t nb_seg;
-  uint16_t nb_sat;
+  uint16_t nb_satU;
+  uint16_t nb_satIV;
   int16_t sd_ok;
   unsigned long hdop;
 } SBoot;
@@ -118,8 +119,11 @@ class TLCD : public TSharpMem, public IntelliScreen {
     void setNbSeg(int16_t nb_) {
       boot.nb_seg = nb_;
     }
-    void setNbSat(uint16_t nb_) {
-      boot.nb_sat = nb_;
+    void setNbSatU(uint16_t nb_) {
+      boot.nb_satU = nb_;
+    }
+    void setNbSatIV(uint16_t nb_) {
+      boot.nb_satIV = nb_;
     }
     void setHDOP (unsigned long hdop_) {
       if (hdop_ > 255) {

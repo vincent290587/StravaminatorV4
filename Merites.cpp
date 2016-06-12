@@ -104,7 +104,7 @@ void Merite::majPower(ListePoints *mes_points, float speed_) {
 
     // STEP 1 : on filtre altitude et vitesse
     //  =>l'elevation de la liste est inversee, le temps aussi
-    fHp = 0.6 * fHp + 0.4 * dElev / dTime;
+    fHp = 0.7 * fHp + 0.3 * dElev / dTime;
 
     if (fSpeed < -0.5) {
       // on init

@@ -304,7 +304,8 @@ void loop() {
   // aiguillage pour chaque type d'affichage
   switch (display.getModeCalcul()) {
     case MODE_GPS:
-      display.setNbSat((uint16_t)gps.sview());
+      display.setNbSatIV((uint16_t)gps.sview());
+      display.setNbSatU((uint16_t)gps.satellites());
       display.setHDOP(gps.hdop());
     case MODE_CRS:
       // recup infos gps
