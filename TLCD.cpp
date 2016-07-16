@@ -218,9 +218,11 @@ void TLCD::updateScreen(void) {
       }
       break;
     case MODE_HRM:
+      setModeCalcul(MODE_HRM);
       afficheHRM();
       break;
     case MODE_HT:
+      setModeCalcul(MODE_HT);
       afficheHT();
       break;
     case MODE_SIMU:
@@ -279,8 +281,7 @@ void TLCD::afficheGPS() {
 
 void TLCD::afficheHRM() {
 
-  cadran(1, 1, "Speed", String(att.cad_speed, 1), "km/h");
-  cadran(1, 2, "Pwr", String(att.pwr), "W");
+  cadranH(1, "RR", String(att.rrint), "ms");
   cadran(2, 1, "CAD", String(att.cad_rpm), "rpm");
   cadran(2, 2, "HRM", String(att.bpm), "bpm");
   traceLignes_NS();
@@ -324,7 +325,7 @@ void TLCD::afficheSegments(void) {
     cadran(3, 1, "CAD", String(att.cad_rpm), "rpm");
     cadran(3, 2, "HRM", String(att.bpm), "bpm");
     cadran(4, 1, "PR", String(att.nbpr), 0);
-    cadran(4, 2, "I", String((int)att.cbatt), "mA");
+    cadran(4, 2, "VA", String(att.vit_asc*3.600, 1), "km/h");
     cadran(6, 1, "Vmoy", String(vmoy, 2), "km/h");
     cadran(6, 2, "Dur", String(hrs) + ":" + mins, 0);
     cadran(7, 1, "Batt", String(att.pbatt), "%");
@@ -352,7 +353,7 @@ void TLCD::afficheSegments(void) {
     cadran(3, 1, "CAD", String(att.cad_rpm), "rpm");
     cadran(3, 2, "HRM", String(att.bpm), "bpm");
     cadran(4, 1, "PR", String(att.nbpr), 0);
-    cadran(4, 2, "I", String((int)att.cbatt), "mA");
+    cadran(4, 2, "VA", String(att.vit_asc*3.600, 1), "km/h");
 
     traceLignes();
 
