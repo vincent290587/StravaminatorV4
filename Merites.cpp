@@ -7,7 +7,7 @@
 */
 
 #include "Merites.h"
-
+#include <WProgram.h>
 
 Merite::Merite() {
   distance = 0.;
@@ -85,10 +85,10 @@ int Merite::majMerite(float lat, float lon, float ele) {
 
 void Merite::majPower(ListePoints *mes_points, float speed_) {
 
-  static float fHp = 0.;
   static float fSpeed = -1.;
-  Point P1, P2;
-  float dElev, dTime;
+  Point P1, P2, Pc;
+  float dTime;
+  uint8_t i;
 
   if (!mes_points) return;
 
@@ -97,25 +97,34 @@ void Merite::majPower(ListePoints *mes_points, float speed_) {
   P1 = mes_points->getFirstPoint();
   P2 = mes_points->getPointAt(FILTRE_NB);
 
-  dElev = P1._alt   - P2._alt;
   dTime = P1._rtime - P2._rtime;
 
-  if (fabs(dTime) > 1.5) {
+  if (fabs(dTime) > 1.5 && fabs(dTime) < FILTRE_NB + 5) {
+
+    // calcul de la vitesse ascentionnelle par regression lineaire
+    for (i = 0; i <= FILTRE_NB; i++) {
+      Pc = mes_points->getPointAt(i);
+      _x[i] = Pc._rtime - P2._rtime;
+      _y[i] = Pc._alt;
+      //Serial.println("Alt " + String(_x[i], 2) + " / " + String(_y[i], 1));
+    }
+    _lrCoef[1] = _lrCoef[0] = 0;
+    simpLinReg(_x, _y, _lrCoef, FILTRE_NB + 1);
 
     // STEP 1 : on filtre altitude et vitesse
-    //  =>l'elevation de la liste est inversee, le temps aussi
-    fHp = 0.7 * fHp + 0.3 * dElev / dTime;
+    vit_asc = 0.8 * vit_asc + 0.2 * _lrCoef[0];
+    //Serial.println("Vit= " + String(vit_asc, 2));
 
     if (fSpeed < -0.5) {
       // on init
       fSpeed = speed_ / 3.6;
     }
     else {
-      fSpeed = 0.7 * fSpeed +  0.3 * speed_ / 3.6;
+      fSpeed = 0.6 * fSpeed +  0.4 * speed_ / 3.6;
     }
 
     // STEP 2 : Calcul
-    puissance = 9.81 * MASSE * fHp; // grav
+    puissance = 9.81 * MASSE * vit_asc; // grav
     puissance += 0.004 * 9.81 * MASSE * fSpeed; // sol + meca
     puissance += 0.204 * fSpeed * fSpeed * fSpeed; // air
     puissance *= 1.025; // transmission (rendement velo)
@@ -128,4 +137,31 @@ void Merite::majPower(ListePoints *mes_points, float speed_) {
   return;
 }
 
+
+void Merite::simpLinReg(float* x, float* y, float* lrCoef, int n) {
+  // pass x and y arrays (pointers), lrCoef pointer, and n.  The lrCoef array is comprised of the slope=lrCoef[0] and intercept=lrCoef[1].  n is length of the x and y arrays.
+  // http://en.wikipedia.org/wiki/Simple_linear_regression
+
+  // initialize variables
+  float xbar = 0;
+  float ybar = 0;
+  float xybar = 0;
+  float xsqbar = 0;
+
+  // calculations required for linear regression
+  for (int i = 0; i < n; i++) {
+    xbar = xbar + x[i];
+    ybar = ybar + y[i];
+    xybar = xybar + x[i] * y[i];
+    xsqbar = xsqbar + x[i] * x[i];
+  }
+  xbar = xbar / n;
+  ybar = ybar / n;
+  xybar = xybar / n;
+  xsqbar = xsqbar / n;
+
+  // simple linear regression algorithm
+  lrCoef[0] = (xybar - xbar * ybar) / (xsqbar - xbar * xbar);
+  lrCoef[1] = ybar - lrCoef[0] * xbar;
+}
 
