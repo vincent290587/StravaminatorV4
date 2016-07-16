@@ -28,6 +28,8 @@ using namespace std;
 
 #define MIN_POINTS 12
 
+#define CAD_SPD_PW_LIM 4.
+
 #define FACTOR 100000.
 
 #define SEG_FIN -5

@@ -42,7 +42,7 @@ void setup() {
   // initialize the digital pin as an output.
   Serial.begin(115200);
   Serial1.begin(9600);
-  Serial3.begin(115200);
+  Serial3.begin(57600);
   pinMode(led, OUTPUT);
   digitalWriteFast(led, HIGH);
 
@@ -76,7 +76,10 @@ void setup() {
   Serial.println("Debut");
 
   // init GPS
+  pmkt.sendCommand("$PMTK103*30"); // cold start
+  delay(1000);
   pmkt.sendCommand("$PMTK314,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0*29");
+  
 
   /* Initialise the sensor */
   if (!bmp.begin())
@@ -167,10 +170,14 @@ void serialEvent1() {
   char c;
   while (Serial1.available() && att.has_started > 0) {
     c = Serial1.read();
-    //Serial.write(c);
+#ifdef __DEBUG_GPS__
+    Serial.write(c);
+#endif
     if (mode_simu == 0) {
       if (gps.encode(c) && gps.getFixTime() > lastFix + 500) {
-        lastFix = gps.getFixTime();
+        if (gps.isGPRMCValid() || gps.isGPGGAValid()) {
+          lastFix = gps.getFixTime();
+        }
         new_gps_data = 1;
       }
     }
@@ -179,12 +186,17 @@ void serialEvent1() {
 
 void serialEvent3() {
   char c;
-  uint8_t format = 0;
+  uint8_t _format = 0;
   while (Serial3.available() && att.has_started > 0) {
     c = Serial3.read();
-    //Serial.write(c);
-    format = nordic.encode(c);
-    switch (format) {
+    _format = nordic.encode(c);
+#ifdef __DEBUG_NRF__
+    Serial.write(c);
+    if (_format != _SENTENCE_NONE) {
+      Serial.println(String("Format: ") + _format);
+    }
+#endif
+    switch (_format) {
       case _SENTENCE_HRM:
         new_hrm_data = 1;
         break;
@@ -203,7 +215,6 @@ void serialEvent3() {
       case _SENTENCE_NONE:
         break;
       default:
-        Serial.println(String("Phrase non reconnue: ") + format);
         break;
     }
   }
@@ -257,6 +268,8 @@ void loop() {
   // backlight
   if (display.getBackLight() != 0) {
 	  digitalWriteFast(led, LOW);
+  } else {
+    digitalWriteFast(led, HIGH);
   }
 
 
@@ -292,13 +305,15 @@ void loop() {
   upload_request = 0;
 
   // si pas de fix on affiche la page d'info GPS
-  if (att.nbpts > MIN_POINTS + 10 && !gps.isDataValid() && display.getModeAffi() != MODE_GPS) {
-    pmkt.sendCommand("$PMTK314,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0*29");
-    display.setStoredMode(display.getModeAffi());
-    display.setModeAffi(MODE_GPS);
-  } else if (att.nbpts > MIN_POINTS + 10 && gps.isDataValid() && display.getModeAffi() == MODE_GPS) {
-    pmkt.sendCommand("$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28");
-    display.setModeAffi(display.getStoredMode());
+  if (display.getModeCalcul()!=MODE_HRM && display.getModeCalcul()!=MODE_HT) {
+    if (att.nbpts > MIN_POINTS + 10 && !gps.isGPRMCValid() && !gps.isGPGGAValid() && display.getModeAffi() != MODE_GPS) {
+      pmkt.sendCommand("$PMTK314,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0*29");
+      display.setStoredMode(display.getModeAffi());
+      display.setModeAffi(MODE_GPS);
+    } else if (att.nbpts > MIN_POINTS + 10 && (gps.isGPRMCValid() || gps.isGPGGAValid()) && display.getModeAffi() == MODE_GPS) {
+      pmkt.sendCommand("$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28");
+      display.setModeAffi(display.getStoredMode());
+    }
   }
 
   // aiguillage pour chaque type d'affichage
@@ -307,6 +322,18 @@ void loop() {
       display.setNbSatIV((uint16_t)gps.sview());
       display.setNbSatU((uint16_t)gps.satellites());
       display.setHDOP(gps.hdop());
+#ifdef __DEBUG_GPS__
+      if (gps.isGPRMCValid()) {
+        Serial.println("GPRMC valid");
+      } else {
+        //Serial.println("GPRMC not valid");
+      }
+      if (gps.isGPGGAValid()) {
+        Serial.println("GPGGA valid");
+      } else {
+        //Serial.println("GPGGA not valid");
+      }
+#endif
     case MODE_CRS:
       // recup infos gps
       gps.f_get_position(&att.lat, &att.lon, &age);
@@ -363,15 +390,14 @@ void loop() {
         att.secj_prec = att.secj;
       }
 
+      att.vit_asc = cumuls.getVitAsc();
       att.pwr = cumuls.getPower();
       att.climb = cumuls.getClimb();
-      // maj sharp
-      //display.updateAll(&att);
       break;
     case MODE_SIMU:
+      break;
     case MODE_HRM:
     case MODE_HT:
-      //display.updateAll(&att);
       break;
 
   }
@@ -416,19 +442,16 @@ void idle() {
 
 void usage_fault_isr(void) {
   digitalWrite(led, HIGH);
-  errorTone();
   CPU_RESTART
 }
 
 void software_isr(void) {
   digitalWrite(led, HIGH);
-  errorTone();
   CPU_RESTART
 }
 
 void hard_fault_isr(void) {
   digitalWrite(led, HIGH);
-  errorTone();
   CPU_RESTART
 }
 

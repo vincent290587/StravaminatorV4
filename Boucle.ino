@@ -50,6 +50,7 @@ uint8_t cond_wait () {
       break;
   }
 
+
   return 1;
 }
 
@@ -62,7 +63,11 @@ void boucle_outdoor () {
 
   resetdelay_();
 
-  cumuls.majPower(&mes_points, att.speed);
+  if (att.cad_speed > CAD_SPD_PW_LIM && att.cad_rpm > 0) {
+    cumuls.majPower(&mes_points, att.cad_speed);
+  } else {
+    cumuls.majPower(&mes_points, att.speed);
+  }
 
   std::list<Segment>::iterator _iter;
   Segment *seg;
@@ -74,7 +79,7 @@ void boucle_outdoor () {
 
     seg = _iter.operator->();
 
-    if (seg->isValid()) {
+    if (seg->isValid() && time_c < 930) {
 
       tmp_dist = watchdog (seg, att.lat, att.lon);
       if (tmp_dist < min_dist_seg && seg->getStatus() == SEG_OFF) min_dist_seg = tmp_dist;

@@ -11,9 +11,9 @@
 
 //#define __DEBUG__
 //#define __DEBUG_STC__
+//#define __DEBUG_GPS__
+//#define __DEBUG_NRF__
 //#define __SST__
-
-static uint8_t BL_level = 180;
 
 const uint8_t virtbtn0 = 2; // PTD0
 const uint8_t virtbtn1 = 14; // PTD1
