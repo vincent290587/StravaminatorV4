@@ -76,7 +76,7 @@ void setup() {
   Serial.println("Debut");
 
   // init GPS
-  pmkt.sendCommand("$PMTK103*30"); // cold start
+  //pmkt.sendCommand("$PMTK103*30"); // cold start
   delay(1000);
   pmkt.sendCommand("$PMTK314,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0*29");
   
